@@ -23,8 +23,8 @@ class GameNew:
   s.mode_cur=1;s.diff_cur=1;s.diff=C.DIFF_NORMAL
   s.coins=0;s.coins_max=0;s.deaths=0
   s.crowns=_load_cr()
-  s.star_t=0;s.slot_f=0;s.slot_r=-1;s.slot_done=False
-  s.pipe_f=0;s.pipe_world=None
+  s.star_t=0;s.slot_f=0;s.slot_r=0
+  s.pipe_f=0;s.pipe_world=None;s._pipe_near_exit=False
   s.main_world=None;s.main_cam=0;s.main_ents=[]
   s._ending=None
   s._load_vol()
@@ -65,7 +65,7 @@ class GameNew:
   elif st==S_INTRO:ui.draw_stage_intro_new(o,s.bank,s.sn,s.lives,s.diff['name'])
   elif st==S_PAN:s._d_play()
   elif st==S_PLAY or st==S_DIE:s._d_play()
-  elif st==S_PAUSE:s._d_play();o.fill_rect(38,22,52,20,0);o.rect(38,22,52,20,1);rd.draw_text(o,s.bank,'PAUSE',51,29)
+  elif st==S_PAUSE:s._d_play();o.fill_rect(30,20,68,26,0);o.rect(30,20,68,26,1);rd.draw_text(o,s.bank,'PAUSE',51,23);rd.draw_text(o,s.bank,'123:TITLE',37,33)
   elif st==S_CLEAR:s._d_clear()
   elif st==S_OVER:s._d_over()
   elif st==S_PIPE_IN or st==S_PIPE_OUT:ui.draw_pipe_transition(o,s.bank,s.st_t,st==S_PIPE_IN)
@@ -87,15 +87,23 @@ class GameNew:
   s.player.y=float(sr*C.TILE - s.player.h)
   s.player.gravity_scale=sd.get('gravity_scale',1.0)
   s.player.is_water=sd.get('water',False)
-  s.ents=[];objs=list(sd['objects'])
+  s.ents=[];base_objs=sd['objects']
   es=sd.get('enemy_sets',{})
   dk=s.diff['name'].lower()
-  if dk in es:objs+=es[dk]
+  # enemy_sets がある難易度はベース敵リストを差し替え(追加ではない)
+  # qblock系エントリはどちらも entity 生成時にスキップされるので無視してよい
+  if dk in es:
+   objs=list(es[dk])
+  else:
+   objs=list(base_objs)
+  spd=s.diff.get('speed_mul',1.0)
   for obj in objs:
    c,r,ts=obj[0],obj[1],obj[2]
    if ts.startswith('qblock'):continue
    e=en.make_entity_new(ts,c,r)
-   if e:s.ents.append(e)
+   if e:
+    if spd!=1.0 and hasattr(e,'vx'):e.vx*=spd
+    s.ents.append(e)
   s.fbs=[];s.cam_x=0;s.cam_y=0
   s.tl=sd.get('time_limit',100);s.tsf=0
   s.coins_max+=s.world.count_coins()
@@ -106,7 +114,7 @@ class GameNew:
  def _u_title(s):
   s.st_t+=1
   if s.st_t==1:s.audio.play_bgm('overworld')
-  if s.st_t>=2:s._cs(S_MODE)
+  if s.st_t>=60:s._cs(S_MODE)
  def _u_mode(s):
   s.st_t+=1
   if s.inp.pressed(1):s.mode_cur=(s.mode_cur-1)%4
@@ -184,6 +192,8 @@ class GameNew:
   elif s.st_t<60:s.cam_x=int(mx*(60-s.st_t)/30)
   else:s.cam_x=0;s._cs(S_PLAY)
  def _u_play(s):
+  if s.inp.held(0)and s.inp.held(1)and s.inp.held(2):
+   s.audio.stop_bgm();s._cs(S_TITLE);return
   if s.inp.held(0)and s.inp.pressed(2):
    s.audio.play_sfx('pause');s.audio.pause_bgm();s._cs(S_PAUSE);return
   crouch=s.inp.held(2)
@@ -234,8 +244,7 @@ class GameNew:
    boss_dead=True;has_boss=False
    for e in s.ents:
     if isinstance(e,et.Boss):has_boss=True;boss_dead=e.hp<=0 if boss_dead else False
-   if has_boss and boss_dead:pass
-   elif not has_boss:s._on_clear()
+   if (has_boss and boss_dead) or not has_boss:s._on_clear()
   s.fx.set_player_state(s.player.state)
   if s.player.invincible>0:s.fx.set_invincible(2)
  def _fire(s,x,y,d):
@@ -255,17 +264,23 @@ class GameNew:
   import urandom
   r=urandom.getrandbits(7)%100;sx=col*C.TILE;sy=(row-1)*C.TILE
   p=C.QBLOCK_PROBS
+  s.slot_f=90  # スロット演出開始(60フレームスピン→30フレーム結果表示)
   if r<p[0]:
+   s.slot_r=0
    if s.player.state==pl.STATE_SMALL:s.ents.append(et.Mushroom(sx,sy))
    else:s.score+=C.SCORE_COIN;s.coins+=1
    s.audio.play_sfx('powerup');s.fx.rainbow(20)
   elif r<p[1]:
+   s.slot_r=1
    s.ents.append(et.FireFlower(sx,sy));s.audio.play_sfx('powerup');s.fx.rainbow(20)
   elif r<p[2]:
+   s.slot_r=2
    s.ents.append(et.OneUp(sx,sy));s.audio.play_sfx('1up')
   elif r<p[3]:
+   s.slot_r=3
    s.score+=C.SCORE_COIN;s.coins+=1;s.audio.play_sfx('coin');s.fx.event_flash((40,35,0),6)
   else:
+   s.slot_r=4
    s.ents.append(en.StarItem(sx,sy));s.audio.play_sfx('powerup');s.fx.rainbow(30)
  def _coin_pick(s):
   px,py,pw,ph=s.player.aabb()
@@ -323,8 +338,10 @@ class GameNew:
     else:s.player.vy=-2.0;s._dmg()
    else:
     if e.on_collide(s.player)=='damage':s._dmg()
-   if isinstance(e,et.Boss):
-    if e.fire_hits(px,py,pw,ph):s._dmg()
+  # ボス火球は本体AABBと無関係に当たり判定
+  for e in s.ents:
+   if isinstance(e,et.Boss) and e.alive:
+    if e.fire_hits(px,py,pw,ph):s._dmg();break
  def _dmg(s):
   if s.player.invincible>0:return
   died=s.player.take_damage()
@@ -361,8 +378,12 @@ class GameNew:
   tx=int(s.player.x)-40;mx=max(0,s.world.width*C.TILE-C.SCREEN_W)
   s.cam_x=max(0,min(tx,mx))
   ps=sn.PIPE_SUBSTAGE;ec=ps.get('exit_col',30)
-  if int(s.player.x)//C.TILE>=ec and s.inp.pressed(0):
+  near_exit=int(s.player.x)//C.TILE>=ec
+  s._pipe_near_exit=near_exit
+  if near_exit and s.inp.pressed(0):
    s.audio.play_sfx('pipe');s._cs(S_PIPE_OUT)
+  if s.inp.held(0)and s.inp.held(1)and s.inp.held(2):
+   s.audio.stop_bgm();s.world=s.main_world if s.main_world else s.world;s._cs(S_TITLE);return
   if s.player.y>s.world.map_h_px+8:s.player.kill_by_fall()
   if s.player.state==pl.STATE_DEAD:s._cs(S_DIE);s.audio.play_sfx('damage')
  def _u_pipeout(s):
@@ -380,12 +401,12 @@ class GameNew:
  def _u_pause(s):
   s.st_t+=1
   if s.inp.pressed(0):s.audio.play_sfx('pause');s.audio.resume_bgm();s._cs(S_PLAY)
-  if s.st_t>20 and s.inp.held(0)and s.inp.pressed(2):s.audio.stop_bgm();s._cs(S_TITLE)
+  if s.inp.held(0)and s.inp.held(1)and s.inp.held(2):s.audio.stop_bgm();s._cs(S_TITLE)
  def _u_clear(s):
   s.st_t+=1
   if s.st_t>=150:
    if s.score>s.hi:s.hi=s.score
-   if s.sn>=len(sn.STAGES_NEW):s._cs(S_END);s.audio.play_sfx('stage_clear')
+   if s.sn>=len(sn.STAGES_NEW):s._cs(S_END)
    else:s.sn+=1;s._cs(S_INTRO)
  def _u_over(s):
   s.st_t+=1
@@ -408,10 +429,12 @@ class GameNew:
    if f.alive:f.draw(o,s.bank,s.cam_x,s.cam_y)
   s.player.draw(o,s.bank,s.cam_x,s.cam_y)
   ui.draw_header_new(o,s.bank,s.score,s.lives,s.tl,str(s.sn),s.coins)
-  if s.slot_f>0 and not s.slot_done:
-   ui.draw_item_slot(o,s.bank,s.slot_f,s.slot_r,s.slot_done)
+  if s.st==S_PIPE_P and s._pipe_near_exit and (s.frame>>3)&1:
+   rd.draw_text(o,s.bank,'SW1:EXIT',36,54)
+  if s.slot_f>0:
+   settled=s.slot_f<=30
+   ui.draw_item_slot(o,s.bank,s.slot_f,s.slot_r,settled)
    s.slot_f-=1
-   if s.slot_f==0:s.slot_done=True
  def _d_clear(s):
   o=s.oled;o.fill(0);o.rect(4,6,120,52,1)
   rd.draw_text(o,s.bank,'STAGE CLEAR!',28,12)
@@ -432,8 +455,8 @@ class GameNew:
    if(s.st_t+sx)&8:o.pixel(sx,sy,1);o.pixel(sx+1,sy,1)
   o.rect(6,14,116,36,1);rd.draw_text(o,s.bank,'YOU WIN!',44,20)
   rd.draw_text(o,s.bank,'SCORE',14,32);rd.draw_number(o,s.bank,s.score,44,32,width=5)
-  for i in range(min(s.crowns,5)):
-   o.blit(s.bank.fb['crown'],90+i*8,6)
+  for i in range(min(s.crowns,4)):
+   o.blit(s.bank.fb['crown'],96+i*8,6)
   if(s.st_t>>3)&1:rd.draw_text(o,s.bank,'PRESS SW1',41,54)
 
 def _load_cr():

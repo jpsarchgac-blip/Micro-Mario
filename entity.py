@@ -402,7 +402,7 @@ class Boss(Entity):
         # 火球描画
         for f in self.fireballs:
             fx = int(f[0]) - cam_x
-            fy = int(f[1])
+            fy = int(f[1]) - cam_y
             if -8 <= fx <= 128:
                 oled.blit(bank.fb['boss_fire'], fx, fy)
 

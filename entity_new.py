@@ -55,8 +55,8 @@ class PatapataNew:
             self.vy+=0.4;self.y+=self.vy
             if self.y>world.map_h_px+16: self.alive=False
             return
-        self.x+=self.vx;self.anim+=1
-        # 壁で反転
+        self.anim+=1
+        # 壁で反転 (collide_x が移動も担う)
         nx=world.collide_x(self.x,self.y,self.w,self.h,self.vx)
         if nx==self.x and self.vx!=0: self.vx=-self.vx
         else: self.x=nx
