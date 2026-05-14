@@ -57,8 +57,7 @@ class AutoInput:
 
     def held(self, i):
         if i == 0: return self._jf > 0  # ジャンプ長押し → フルジャンプ高さ
-        if i == 2: return True           # ダッシュ常時ON
-        return False
+        return False  # SW3ダッシュ/しゃがみは使わない(クラウチ回避)
 
     def released(self, i): return False
     def any_pressed(self):  return self._jf == _JUMP_HOLD

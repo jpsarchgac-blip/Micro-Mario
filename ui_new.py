@@ -45,7 +45,7 @@ def draw_option_menu(oled,bank,vol):
     # Vol meter 0..10
     bar_w=80; bar_x=24; bar_y=36
     oled.rect(bar_x,bar_y,bar_w,6,1)
-    fill_w=int((vol/10)*bar_w)
+    fill_w=int((vol/20)*bar_w)
     if fill_w>0:
         oled.fill_rect(bar_x,bar_y,fill_w,6,1)
         

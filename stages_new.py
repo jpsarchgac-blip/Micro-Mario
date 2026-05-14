@@ -92,8 +92,8 @@ def _build_s2():
     for _ in range(3): t.append(uc(A,A,A,A,A,A,A,A))
     # Phase2: トゲ地帯(25-49)
     for _ in range(5): t.append(uc(A,A,A,A,A,A,A,A))
-    t.append(_c(R,G,G,A,A,A,A,A,A,S,A,G,G))  # トゲ
-    t.append(_c(R,G,G,A,A,A,A,A,A,S,A,G,G))
+    t.append(_c(R,G,G,A,A,A,A,A,A,A,S,G,G))  # トゲ
+    t.append(_c(R,G,G,A,A,A,A,A,A,A,S,G,G))
     for _ in range(6): t.append(uc(A,A,A,A,A,A,A,A))  # 休憩
     t.append(uc(A,A,A,Q,A,A,A,A))  # ?ブロック
     for _ in range(5): t.append(uc(A,A,A,A,A,A,A,A))
@@ -102,8 +102,8 @@ def _build_s2():
     for _ in range(5): t.append(uc(A,A,A,A,A,A,A,A))
     for _ in range(4): t.append(_c(R,G,G,B,A,A,A,A,B,A,A,G,G))  # 狭路
     for _ in range(8): t.append(uc(A,A,A,A,A,A,A,A))  # 休憩
-    t.append(_c(R,G,G,A,A,A,A,A,A,S,A,G,G))  # トゲ
-    t.append(_c(R,G,G,A,A,A,A,A,A,S,A,G,G))
+    t.append(_c(R,G,G,A,A,A,A,A,A,A,S,G,G))  # トゲ
+    t.append(_c(R,G,G,A,A,A,A,A,A,A,S,G,G))
     for _ in range(5): t.append(uc(A,A,A,A,A,A,A,A))
     # Phase4-5: ゴール(75-127)
     for _ in range(10): t.append(uc(A,A,A,A,A,A,A,A))

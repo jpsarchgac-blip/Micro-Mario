@@ -43,6 +43,7 @@ class Player:
         self.powerup_anim = 0 # 変身演出
         self.dead_timer = 0
         self.run_charge = 0   # ダッシュ加速チャージ
+        self.crouching = False  # しゃがみ状態
 
         # 物理パラメータ(ステージで上書き可能)
         self.gravity_scale = 1.0
@@ -131,16 +132,27 @@ class Player:
         # 今回は左右ボタンがないので、自動右移動(あるいは速度可変)
         # 設計: SW3=ダッシュで速度UP、押さなければ通常歩行
         run = inp.held(2)
-        if run:
-            if self.run_charge < C.RUN_ACCEL_FR:
-                self.run_charge += 1
+        # しゃがみ判定: 地上 + SW3 held + BIG/FIRE のみ
+        if self.on_ground and run and self.state in (STATE_BIG, STATE_FIRE):
+            if not self.crouching:
+                self.crouching = True
+                self.h = 8
+                self.y += 8  # 縮んだ分だけ下げて地面に接地を維持
+            self.run_charge = 0
+            target_vx = C.CROUCH_WALK_SPEED
         else:
-            if self.run_charge > 0:
-                self.run_charge -= 1
-
-        # ダッシュ加速度補間
-        t = self.run_charge / C.RUN_ACCEL_FR
-        target_vx = C.WALK_SPEED + (C.RUN_SPEED - C.WALK_SPEED) * t
+            if self.crouching:
+                self.crouching = False
+                self.h = 16
+                self.y -= 8  # 元の高さに戻す
+            if run:
+                if self.run_charge < C.RUN_ACCEL_FR:
+                    self.run_charge += 1
+            else:
+                if self.run_charge > 0:
+                    self.run_charge -= 1
+            t = self.run_charge / C.RUN_ACCEL_FR
+            target_vx = C.WALK_SPEED + (C.RUN_SPEED - C.WALK_SPEED) * t
         self.vx = target_vx
         self.facing = 1
 
@@ -254,15 +266,17 @@ class Player:
                     key = 'mario_s_r' if self.facing > 0 else 'mario_s_l'
             oled.blit(fb[key], sx, sy)
         else:
-            # BIG / FIRE: 8x16(上下2枚)
-            if not self.on_ground:
-                top_key = 'mario_b_top_jump'
-                bot_key = 'mario_b_bot_jump'
+            # BIG / FIRE: 8x16(上下2枚) or しゃがみ 8x8(1枚)
+            if self.crouching:
+                oled.blit(fb['mario_b_crouch_1t'], sx, sy)
+            elif not self.on_ground:
+                oled.blit(fb['mario_b_top_jump'], sx, sy)
+                oled.blit(fb['mario_b_bot_jump'], sx, sy + 8)
             else:
                 top_key = 'mario_f_top' if self.state == STATE_FIRE else 'mario_b_top'
                 bot_key = 'mario_b_bot2' if (self.anim_tick >> 2) & 1 else 'mario_b_bot'
-            oled.blit(fb[top_key], sx, sy)
-            oled.blit(fb[bot_key], sx, sy + 8)
+                oled.blit(fb[top_key], sx, sy)
+                oled.blit(fb[bot_key], sx, sy + 8)
 
     # ----- AABB getter -----
     def aabb(self):

@@ -26,6 +26,7 @@ class GameNew:
   s.crowns=_load_cr()
   s.star_t=0;s.slot_f=0;s.slot_r=0;s._pending_item=None
   s.test_mode=False;s._test_t=0
+  s.vol_step=10;s._quit_hold=0
   s.pipe_f=0;s.pipe_world=None;s._pipe_near_exit=False
   s.main_world=None;s.main_cam=0;s.main_ents=[]
   s._ending=None
@@ -74,7 +75,7 @@ class GameNew:
   elif st==S_PIPE_IN or st==S_PIPE_OUT:ui.draw_pipe_transition(o,s.bank,s.st_t,st==S_PIPE_IN)
   elif st==S_PIPE_P:s._d_play()
   elif st==S_MUSIC:ui.draw_music_player(o,s.bank,s.music_list[s.music_cur],s.music_playing)
-  elif st==S_OPTION:ui.draw_option_menu(o,s.bank,int(s.audio.master_volume*10))
+  elif st==S_OPTION:ui.draw_option_menu(o,s.bank,s.vol_step)
   elif st==S_END:s._d_end()
   elif st==S_FLAG:s._d_flag()
   o.show()
@@ -146,14 +147,15 @@ class GameNew:
   try:
    with open(C.SETTINGS_FILE,'r')as f:
     v=int(f.read().strip())
-    s.audio.master_volume = max(0, min(10, v)) / 10.0
+    s.vol_step=max(0,min(20,v))
   except Exception:
-   s.audio.master_volume = 1.0
+   s.vol_step=10
+  s.audio.master_volume=(s.vol_step/20.0)**1.5
 
  def _save_vol(s):
   try:
    with open(C.SETTINGS_FILE,'w')as f:
-    f.write(str(int(s.audio.master_volume*10)))
+    f.write(str(s.vol_step))
   except Exception:
    pass
 
@@ -175,13 +177,12 @@ class GameNew:
 
  def _u_option(s):
   s.st_t+=1
-  vol=int(s.audio.master_volume*10)
-  if s.inp.pressed(1) and vol>0:
-   vol-=1; s.audio.master_volume=vol/10.0; s.audio.play_sfx('coin')
-  if s.inp.pressed(2) and vol<10:
-   vol+=1; s.audio.master_volume=vol/10.0; s.audio.play_sfx('coin')
+  if s.inp.pressed(1) and s.vol_step>0:
+   s.vol_step-=1;s.audio.master_volume=(s.vol_step/20.0)**1.5;s.audio.play_sfx('coin')
+  if s.inp.pressed(2) and s.vol_step<20:
+   s.vol_step+=1;s.audio.master_volume=(s.vol_step/20.0)**1.5;s.audio.play_sfx('coin')
   if s.inp.pressed(0):
-   s.audio.play_sfx('select'); s._save_vol(); s._cs(S_MODE)
+   s.audio.play_sfx('select');s._save_vol();s._cs(S_MODE)
  def _u_diff(s):
   s.st_t+=1
   if s.inp.pressed(1):s.diff_cur=(s.diff_cur-1)%3
@@ -205,9 +206,11 @@ class GameNew:
   else:s.cam_x=0;s._cs(S_PLAY)
  def _u_play(s):
   if s.inp.held(0)and s.inp.held(1)and s.inp.held(2):
-   s.audio.stop_bgm();s._cs(S_TITLE);return
-  if s.inp.held(0)and s.inp.pressed(2):
-   s.audio.play_sfx('pause');s.audio.pause_bgm();s._cs(S_PAUSE);return
+   s._quit_hold+=1
+   if s._quit_hold>=C.TARGET_FPS*3:
+    s._quit_hold=0;s.audio.stop_bgm();s._cs(S_TITLE);return
+  else:
+   s._quit_hold=0
   crouch=s.inp.held(2)
   if crouch and s.player.is_water:s.player.vy+=0.3
   if crouch:s.player.vx*=C.CROUCH_SPEED_MUL
@@ -267,7 +270,7 @@ class GameNew:
  def _fire(s,x,y,d):
   if len(s.fbs)<2:s.fbs.append(et.Fireball(x,y,d))
  def _hit_block(s,col):
-  hr=int(s.player.y)//C.TILE
+  hr=int(s.player.y)//C.TILE-1
   if hr<0 or hr>=s.world.rows:return
   tid=s.world.tile_at(col,hr)
   if tid==wn.QBLOCK:
@@ -438,7 +441,10 @@ class GameNew:
  def _u_pause(s):
   s.st_t+=1
   if s.inp.pressed(0):s.audio.play_sfx('pause');s.audio.resume_bgm();s._cs(S_PLAY)
-  if s.inp.held(0)and s.inp.held(1)and s.inp.held(2):s.audio.stop_bgm();s._cs(S_TITLE)
+  if s.inp.held(0)and s.inp.held(1)and s.inp.held(2):
+   s._quit_hold+=1
+   if s._quit_hold>=C.TARGET_FPS*3:s._quit_hold=0;s.audio.stop_bgm();s._cs(S_TITLE)
+  else:s._quit_hold=0
  def _u_clear(s):
   s.st_t+=1
   if s.st_t>=150:
