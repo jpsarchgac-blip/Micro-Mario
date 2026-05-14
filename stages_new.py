@@ -141,15 +141,23 @@ def _build_s1():
             (4,6,'qblock_random'),(14,5,'qblock_random'),(24,6,'qblock_random'),
             (68,5,'qblock_random'),(70,6,'qblock_random'),(72,5,'qblock_random'),
             (84,4,'qblock_random'),
-            (12,R-3,'goomba'),(22,R-3,'goomba'),
-            (45,R-3,'goomba'),
-            (66,R-3,'goomba'),(78,R-3,'goomba'),
-            (97,R-3,'goomba'),
         ],
         'enemy_sets':{
-            'easy':[(12,R-3,'goomba'),(66,R-3,'goomba'),(97,R-3,'goomba')],
-            'hard':[(12,R-3,'goomba'),(22,R-3,'goomba'),(45,R-3,'goomba'),
-                    (66,R-3,'goomba'),(78,R-3,'goomba'),(97,R-3,'goomba')],
+            'easy': [
+                (22,R-3,'goomba'),
+                (66,R-3,'goomba'),
+            ],
+            'normal': [
+                (12,R-3,'goomba'),(22,R-3,'goomba'),
+                (45,R-3,'goomba'),
+                (78,R-3,'goomba'),(97,R-3,'goomba'),
+            ],
+            'hard': [
+                (12,R-3,'goomba'),(22,R-3,'goomba'),
+                (45,R-3,'goomba'),
+                (66,R-3,'goomba'),(78,R-3,'goomba'),
+                (97,R-3,'goomba'),
+            ],
         },
     }
 
@@ -229,15 +237,22 @@ def _build_s2():
         'start_col':2,'start_row':R-4,'goal_col':98,
         'objects':[
             (29,5,'qblock_random'),(30,2,'qblock_random'),
-            (15,R-3,'goomba'),(30,R-3,'goomba'),
-            (45,3,'bat'),(60,3,'bat'),
-            (72,R-3,'goomba'),(88,R-3,'goomba'),
         ],
         'enemy_sets':{
-            'easy':[(15,R-3,'goomba'),(60,3,'bat')],
-            'hard':[(15,R-3,'goomba'),(30,R-3,'goomba'),
-                    (45,3,'bat'),(60,3,'bat'),
-                    (72,R-3,'goomba'),(88,R-3,'goomba')],
+            'easy': [
+                (30,R-3,'goomba'),
+                (72,R-3,'goomba'),
+            ],
+            'normal': [
+                (15,R-3,'goomba'),(30,R-3,'goomba'),
+                (45,3,'bat'),
+                (72,R-3,'goomba'),
+            ],
+            'hard': [
+                (15,R-3,'goomba'),(30,R-3,'goomba'),
+                (45,3,'bat'),(60,3,'bat'),
+                (72,R-3,'goomba'),(88,R-3,'goomba'),
+            ],
         },
     }
 
@@ -285,13 +300,21 @@ def _build_s3():
         'start_col':2,'start_row':6,'goal_col':110,
         'objects':[
             (38,5,'qblock_random'),
-            (10,6,'fish'),(20,10,'fish'),(35,8,'fish'),
-            (55,6,'fish'),(70,10,'fish'),(85,8,'fish'),(100,6,'fish'),
         ],
         'enemy_sets':{
-            'easy':[(20,10,'fish'),(55,6,'fish'),(100,6,'fish')],
-            'hard':[(10,6,'fish'),(20,10,'fish'),(35,8,'fish'),
-                    (55,6,'fish'),(70,10,'fish'),(85,8,'fish'),(100,6,'fish')],
+            'easy': [
+                (25,10,'fish'),
+                (65,6,'fish'),
+                (100,6,'fish'),
+            ],
+            'normal': [
+                (10,6,'fish'),(25,10,'fish'),(45,8,'fish'),
+                (65,6,'fish'),(85,10,'fish'),(100,6,'fish'),
+            ],
+            'hard': [
+                (10,6,'fish'),(20,10,'fish'),(35,8,'fish'),
+                (55,6,'fish'),(70,10,'fish'),(85,8,'fish'),(100,6,'fish'),
+            ],
         },
     }
 
@@ -420,18 +443,26 @@ def _build_s4():
             (27,4,'qblock_random'),
             (57,4,'qblock_random'),
             (92,4,'qblock_random'),
-            (17,6,'pata_new'),(36,6,'pata_new'),
-            (50,7,'killer_spawn'),
-            (65,6,'pata_new'),(80,5,'killer_spawn'),
-            (96,9,'pata_new'),
-            (22,9,'big_mushroom'),(85,9,'big_mushroom'),
         ],
         'enemy_sets':{
-            'easy':[(17,6,'pata_new'),(65,6,'pata_new'),(96,9,'pata_new'),
-                    (22,9,'big_mushroom'),(85,9,'big_mushroom')],
-            'hard':[(17,6,'pata_new'),(36,6,'pata_new'),
-                    (50,7,'killer_spawn'),(65,6,'pata_new'),
-                    (80,5,'killer_spawn'),(96,9,'pata_new')],
+            'easy': [
+                (36,6,'pata_new'),
+                (65,6,'pata_new'),
+                (22,9,'big_mushroom'),(85,9,'big_mushroom'),
+            ],
+            'normal': [
+                (17,6,'pata_new'),(36,6,'pata_new'),
+                (50,7,'killer_spawn'),
+                (65,6,'pata_new'),
+                (96,9,'pata_new'),
+                (22,9,'big_mushroom'),(85,9,'big_mushroom'),
+            ],
+            'hard': [
+                (17,6,'pata_new'),(36,6,'pata_new'),
+                (50,7,'killer_spawn'),
+                (65,6,'pata_new'),(80,5,'killer_spawn'),
+                (96,9,'pata_new'),
+            ],
         },
     }
 
@@ -485,16 +516,23 @@ def _build_s5():
         'start_col':2,'start_row':R-4,'goal_col':105,
         'objects':[
             (38,5,'qblock_random'),(62,5,'qblock_random'),
-            (18,R-3,'goomba'),(35,R-3,'goomba'),
-            (55,4,'killer_spawn'),
-            (72,R-3,'goomba'),(85,4,'killer_spawn'),
-            (98,R-3,'goomba'),
         ],
         'enemy_sets':{
-            'easy':[(18,R-3,'goomba'),(72,R-3,'goomba'),(98,R-3,'goomba')],
-            'hard':[(18,R-3,'goomba'),(35,R-3,'goomba'),
-                    (55,4,'killer_spawn'),(72,R-3,'goomba'),
-                    (85,4,'killer_spawn'),(98,R-3,'goomba')],
+            'easy': [
+                (35,R-3,'goomba'),
+                (98,R-3,'goomba'),
+            ],
+            'normal': [
+                (18,R-3,'goomba'),(35,R-3,'goomba'),
+                (55,4,'killer_spawn'),
+                (98,R-3,'goomba'),
+            ],
+            'hard': [
+                (18,R-3,'goomba'),(35,R-3,'goomba'),
+                (55,4,'killer_spawn'),
+                (72,R-3,'goomba'),(85,4,'killer_spawn'),
+                (98,R-3,'goomba'),
+            ],
         },
     }
 

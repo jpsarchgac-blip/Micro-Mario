@@ -87,10 +87,13 @@ class GameNew:
   s.player.y=float(sr*C.TILE - s.player.h)
   s.player.gravity_scale=sd.get('gravity_scale',1.0)
   s.player.is_water=sd.get('water',False)
-  s.ents=[];objs=list(sd['objects'])
+  s.ents=[]
+  # QBlock/アイテムのみ objects から取得、敵は enemy_sets から難易度別に取得
   es=sd.get('enemy_sets',{})
   dk=s.diff['name'].lower()
-  if dk in es:objs+=es[dk]
+  objs=[o for o in sd['objects'] if o[2].startswith('qblock') or not any(
+      o[2]==et for et in ('goomba','bat','fish','boss','pata_new','killer_spawn','big_mushroom'))]
+  objs+=es.get(dk, es.get('normal', []))
   for obj in objs:
    c,r,ts=obj[0],obj[1],obj[2]
    if ts.startswith('qblock'):continue
