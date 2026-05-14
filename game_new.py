@@ -224,6 +224,9 @@ class GameNew:
   if getattr(s.player,'_fire_request',False):s.audio.play_sfx('fireball')
   if s.player.head_hit_col>=0:s._hit_block(s.player.head_hit_col)
   s._coin_pick()
+  # fall-off-bottom death
+  if s.player.y > s.world.map_h_px + 8:
+   s.player.kill_by_fall();s._cs(S_DIE);s.audio.stop_bgm();s.audio.play_sfx('damage');return
   # lethal tile check
   if s.world.touches_lethal(s.player.x,s.player.y,s.player.w,s.player.h):
    s.player.kill_by_fall();s._cs(S_DIE);s.audio.stop_bgm();s.audio.play_sfx('damage');return
