@@ -60,7 +60,7 @@ class WorldNew:
         if row < 0:
             return AIR
         if row >= self.rows:
-            return GROUND
+            return AIR
         return self.terrain[col][row]
 
     def set_tile(self, col, row, tid):
