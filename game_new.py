@@ -7,6 +7,7 @@ import world_new as wn
 import stages_new as sn
 import entity_new as en
 import ui_new as ui
+from auto_input import AutoInput
 
 S_TITLE='t';S_MODE='m';S_DIFF='d';S_INTRO='i';S_PAN='pan'
 S_PLAY='p';S_DIE='die';S_PAUSE='pau';S_CLEAR='cl'
@@ -24,6 +25,7 @@ class GameNew:
   s.coins=0;s.coins_max=0;s.deaths=0
   s.crowns=_load_cr()
   s.star_t=0;s.slot_f=0;s.slot_r=0;s._pending_item=None
+  s.test_mode=False;s._test_t=0
   s.pipe_f=0;s.pipe_world=None;s._pipe_near_exit=False
   s.main_world=None;s.main_cam=0;s.main_ents=[]
   s._ending=None
@@ -106,7 +108,7 @@ class GameNew:
    if e:
     if spd!=1.0 and hasattr(e,'vx'):e.vx*=spd
     s.ents.append(e)
-  s.fbs=[];s.cam_x=0;s.cam_y=0
+  s.fbs=[];s.cam_x=0;s.cam_y=0;s._test_t=0
   s.tl=sd.get('time_limit',100);s.tsf=0
   s.coins_max+=s.world.count_coins()
   if num==6 and s.player.state!=pl.STATE_FIRE:
@@ -119,8 +121,8 @@ class GameNew:
   if s.st_t>=60:s._cs(S_MODE)
  def _u_mode(s):
   s.st_t+=1
-  if s.inp.pressed(1):s.mode_cur=(s.mode_cur-1)%4
-  if s.inp.pressed(2):s.mode_cur=(s.mode_cur+1)%4
+  if s.inp.pressed(1):s.mode_cur=(s.mode_cur-1)%5
+  if s.inp.pressed(2):s.mode_cur=(s.mode_cur+1)%5
   if s.inp.pressed(0):
    s.audio.play_sfx('select')
    if s.mode_cur==0:
@@ -131,6 +133,13 @@ class GameNew:
     s.audio.stop_bgm();s.music_cur=0;s.music_playing=False;s._cs(S_MUSIC)
    elif s.mode_cur==3:
     s._cs(S_OPTION)
+   elif s.mode_cur==4:
+    # テストモード: AutoInputに差し替えて全ステージ自動走破
+    s.test_mode=True;s.inp=AutoInput()
+    s.diff=C.DIFF_NORMAL
+    s.lives=s.diff['lives'];s.score=0;s.sn=1;s.deaths=0;s.coins=0;s.coins_max=0
+    s.fx.set_difficulty(s.diff['name'])
+    s.audio.stop_bgm();s._cs(S_INTRO)
   return None
 
  def _load_vol(s):
@@ -202,6 +211,10 @@ class GameNew:
   crouch=s.inp.held(2)
   if crouch and s.player.is_water:s.player.vy+=0.3
   if crouch:s.player.vx*=C.CROUCH_SPEED_MUL
+  if s.test_mode:
+   s.inp.update_auto(s.player,s.world,s.ents)
+   s._test_t+=1
+   if s.sn==6 and s._test_t>=60:s._on_clear();return
   s.player.update(s.inp,s._fire)
   if getattr(s.player,'_just_jumped',False):
    s.audio.play_sfx('jump_big'if s.player.state!=pl.STATE_SMALL else'jump_small')
@@ -214,7 +227,7 @@ class GameNew:
   # pipe check
   sd=sn.get_stage_new(s.sn)
   pc=sd.get('pipe_col',-1)
-  if pc>0 and crouch and s.player.on_ground:
+  if pc>0 and crouch and s.player.on_ground and not s.test_mode:
    px=int(s.player.x)//C.TILE
    if abs(px-pc)<=1:s._enter_pipe(sd);return
   for e in s.ents:
@@ -418,6 +431,7 @@ class GameNew:
  def _u_die(s):
   s.st_t+=1;s.player.update(s.inp,lambda*a:None)
   if s.st_t>=C.DYING_FR:
+   if s.test_mode:s._cs(S_INTRO);return
    s.lives-=1;s.deaths+=1
    if s.lives<=0:s._cs(S_OVER);s.audio.play_sfx('game_over')
    else:s._cs(S_INTRO)

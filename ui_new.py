@@ -10,11 +10,9 @@ def draw_mode_select(oled,bank,cursor,blink):
     oled.rect(2,2,124,60,1)
     rd.draw_text(oled,bank,'MICRO MARIO',_cx('MICRO MARIO'),4)
     oled.hline(2,13,124,1)
-    rd.draw_text(oled,bank,'SELECT MODE',_cx('SELECT MODE'),16)
-    
-    labels=['OLD MODE','NEW MODE','MUSIC MODE','OPTION MODE']
+    labels=['OLD MODE','NEW MODE','MUSIC MODE','OPTION MODE','TEST MODE']
     for i,lb in enumerate(labels):
-        y=28+i*8
+        y=16+i*8
         if cursor==i and (blink>>2)&1:
             oled.fill_rect(24,y-1,80,9,1)
         rd.draw_text(oled,bank,lb,_cx(lb),y)
