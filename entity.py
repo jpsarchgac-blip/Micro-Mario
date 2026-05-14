@@ -57,11 +57,11 @@ class Goomba(Entity):
         # 重力
         self.vy = min(self.vy + 0.4, C.TERMINAL_VEL)
         # 横移動
+        target_x = self.x + self.vx
         new_x = world.collide_x(self.x, self.y, self.w, self.h, self.vx)
-        if new_x == self.x and self.vx != 0:
+        if abs(new_x - target_x) > 0.01:
             self.vx = -self.vx   # 壁で反転
-        else:
-            self.x = new_x
+        self.x = new_x
         # 縦移動
         new_y, on_ground, _ = world.collide_y(self.x, self.y, self.w, self.h, self.vy)
         self.y = new_y
@@ -402,7 +402,7 @@ class Boss(Entity):
         # 火球描画
         for f in self.fireballs:
             fx = int(f[0]) - cam_x
-            fy = int(f[1])
+            fy = int(f[1]) - cam_y
             if -8 <= fx <= 128:
                 oled.blit(bank.fb['boss_fire'], fx, fy)
 
@@ -459,11 +459,11 @@ class Mushroom(Entity):
             self.y -= 0.5
             return
         self.vy = min(self.vy + 0.3, C.TERMINAL_VEL)
+        target_x = self.x + self.vx
         new_x = world.collide_x(self.x, self.y, self.w, self.h, self.vx)
-        if new_x == self.x:
+        if abs(new_x - target_x) > 0.01:
             self.vx = -self.vx
-        else:
-            self.x = new_x
+        self.x = new_x
         new_y, og, _ = world.collide_y(self.x, self.y, self.w, self.h, self.vy)
         self.y = new_y
         if og:
@@ -509,11 +509,11 @@ class OneUp(Entity):
 
     def update(self, world, player):
         self.vy = min(self.vy + 0.3, C.TERMINAL_VEL)
+        target_x = self.x + self.vx
         new_x = world.collide_x(self.x, self.y, self.w, self.h, self.vx)
-        if new_x == self.x:
+        if abs(new_x - target_x) > 0.01:
             self.vx = -self.vx
-        else:
-            self.x = new_x
+        self.x = new_x
         new_y, og, _ = world.collide_y(self.x, self.y, self.w, self.h, self.vy)
         self.y = new_y
         if og:

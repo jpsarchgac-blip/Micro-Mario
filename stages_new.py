@@ -134,9 +134,9 @@ def _build_s1():
     t=t[:128]
     return{
         'name':'1-1 GREEN HILL','bgm':'overworld','width':128,'rows':R,
-        'time_limit':120,'terrain':t,'water':False,'gravity_scale':1.0,
-        'start_col':2,'start_row':R-4,'goal_col':118,
-        'pipe_col':48,'pipe_dest':'substage','pipe_return_col':54,
+        'time_limit':100,'terrain':t,'water':False,'gravity_scale':1.0,
+        'start_col':2,'start_row':R-4,'goal_col':118,'flag_col':117,
+        'pipe_col':38,'pipe_dest':'substage','pipe_return_col':64,
         'objects':[
             (4,6,'qblock_random'),(14,5,'qblock_random'),(24,6,'qblock_random'),
             (68,5,'qblock_random'),(70,6,'qblock_random'),(72,5,'qblock_random'),
@@ -179,50 +179,22 @@ def _build_s2():
     t.append(uc(A,A,A,A,A,A,B,A))
     t.append(uc(A,A,A,A,A,A,B,A))
     for _ in range(3): t.append(uc(A,A,A,A,A,A,A,A))
-    # 天井から下がるレンガ壁(下をくぐる)
-    t.append(_c(R,G,G,B,B,B,A,A,A,A,A,G,G))
-    t.append(_c(R,G,G,B,B,B,A,A,A,A,A,G,G))
-    t.append(_c(R,G,G,B,B,B,A,A,A,A,A,G,G))
-    for _ in range(3): t.append(uc(A,A,A,A,A,A,A,A))
-
-    # ===== Phase2: トゲ + ?ブロック地帯 (col 25-49) =====
-    for _ in range(3): t.append(uc(A,A,A,A,A,A,A,A))
-    t.append(_c(R,G,G,A,A,A,A,A,A,S,A,G,G))
-    t.append(_c(R,G,G,A,A,A,A,A,A,S,A,G,G))
-    t.append(uc(A,A,A,A,A,A,A,A))
-    t.append(_c(R,G,G,A,A,A,A,A,A,S,A,G,G))
-    for _ in range(2): t.append(uc(A,A,A,A,A,A,A,A))
-    # ?ブロック2つ(高さ違い)
-    t.append(uc(A,A,A,Q,A,A,A,A))
-    t.append(uc(A,A,A,A,A,A,A,A))
-    t.append(_c(R,G,Q,A,A,A,A,A,A,A,A,G,G))  # 天井直下
-    for _ in range(3): t.append(uc(A,A,A,A,A,A,A,A))
-    # コイン横一列
-    for _ in range(6): t.append(_c(R,G,G,A,A,A,A,C,A,A,A,G,G))
-    for _ in range(3): t.append(uc(A,A,A,A,A,A,A,A))
-
-    # ===== Phase3: 狭路 + 段差 (col 50-74) =====
-    for _ in range(4): t.append(_c(R,G,G,B,A,A,A,A,B,A,A,G,G))
-    for _ in range(2): t.append(uc(A,A,A,A,A,A,A,A))
-    t.append(_c(R,G,G,A,A,A,A,A,A,S,A,G,G))
-    for _ in range(3): t.append(uc(A,A,A,A,A,A,A,A))
-    # 段差レンガ壁
-    t.append(_c(R,G,G,A,A,A,B,A,A,A,A,G,G))
-    t.append(_c(R,G,G,A,A,A,B,A,A,A,A,G,G))
-    t.append(uc(A,A,A,A,A,A,A,A))
-    t.append(_c(R,G,G,A,B,A,A,A,A,A,A,G,G))
-    t.append(_c(R,G,G,A,B,A,A,A,A,A,A,G,G))
+    # Phase2: トゲ地帯(25-49)
+    for _ in range(5): t.append(uc(A,A,A,A,A,A,A,A))
+    t.append(_c(R,G,G,A,A,A,A,A,A,A,S,G,G))  # トゲ
+    t.append(_c(R,G,G,A,A,A,A,A,A,A,S,G,G))
+    for _ in range(6): t.append(uc(A,A,A,A,A,A,A,A))  # 休憩
+    t.append(uc(A,A,A,Q,A,A,A,A))  # ?ブロック
     for _ in range(5): t.append(uc(A,A,A,A,A,A,A,A))
     # コイン広場
     for _ in range(3): t.append(_c(R,G,G,A,C,A,C,A,C,A,A,G,G))
 
     # ===== Phase4: 難所 + ゴール (col 75-127) =====
     for _ in range(5): t.append(uc(A,A,A,A,A,A,A,A))
-    # 床スパイク連続
-    t.append(_c(R,G,G,A,A,A,A,A,A,S,A,G,G))
-    t.append(_c(R,G,G,A,A,A,A,A,A,S,A,G,G))
-    t.append(uc(A,A,A,A,A,A,A,A))
-    t.append(_c(R,G,G,A,A,A,A,A,A,S,A,G,G))
+    for _ in range(4): t.append(_c(R,G,G,B,A,A,A,A,B,A,A,G,G))  # 狭路
+    for _ in range(8): t.append(uc(A,A,A,A,A,A,A,A))  # 休憩
+    t.append(_c(R,G,G,A,A,A,A,A,A,A,S,G,G))  # トゲ
+    t.append(_c(R,G,G,A,A,A,A,A,A,A,S,G,G))
     for _ in range(5): t.append(uc(A,A,A,A,A,A,A,A))
     # 最後の?ブロック
     t.append(uc(A,A,A,Q,A,A,A,A))
@@ -437,8 +409,8 @@ def _build_s4():
     t=t[:128]
     return{
         'name':'1-4 SKY ZONE','bgm':'sky','width':128,'rows':R,
-        'time_limit':130,'terrain':t,'water':False,'gravity_scale':1.0,
-        'start_col':2,'start_row':R-5,'goal_col':112,
+        'time_limit':120,'terrain':t,'water':False,'gravity_scale':1.0,
+        'start_col':2,'start_row':R-6,'goal_col':110,'flag_col':110,
         'objects':[
             (27,4,'qblock_random'),
             (57,4,'qblock_random'),
@@ -513,7 +485,7 @@ def _build_s5():
     return{
         'name':'1-5 CASTLE WALL','bgm':'castle','width':128,'rows':R,
         'time_limit':100,'terrain':t,'water':False,'gravity_scale':1.0,
-        'start_col':2,'start_row':R-4,'goal_col':105,
+        'start_col':2,'start_row':R-4,'goal_col':110,'flag_col':110,
         'objects':[
             (38,5,'qblock_random'),(62,5,'qblock_random'),
         ],
