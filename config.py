@@ -7,7 +7,7 @@ PIN_I2C_SDA   = 8
 PIN_I2C_SCL   = 9
 PIN_SW1       = 2     # ジャンプ / 決定
 PIN_SW2       = 3     # ファイア / キャンセル
-PIN_SW3       = 4     # ダッシュ / ポーズ補助
+PIN_SW3       = 6     # ダッシュ / ポーズ補助
 PIN_NEOPIXEL  = 10
 PIN_SPEAKER   = 21
 I2C_FREQ      = 400_000   # 400kHz I2C(SSD1306の事実上の標準)
@@ -78,6 +78,7 @@ DEFAULT_TIME   = 100      # ステージ制限時間(秒)
 # =============================================
 NEW_INVINCIBLE_FR = 60    # 被ダメ後の無敵(2秒@30fps)
 CROUCH_SPEED_MUL  = 0.4   # しゃがみ時の移動速度倍率
+CROUCH_WALK_SPEED = 0.35  # しゃがみ中の移動速度
 STAR_DURATION      = 300   # スター無敵(10秒@30fps)
 
 # ?ブロック アイテム確率(累積%: きのこ50, ファイア65, 1UP80, コイン90, スター100)

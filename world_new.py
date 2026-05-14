@@ -39,7 +39,7 @@ _TILE_NAME = {
     COIN:       'coin',
     SPIKE:      'spike',
     CLOUD_PLAT: 'cloud_plat',
-    GOAL:       'goal',
+    GOAL:       'goal_zone',
     GRASS:      'grass',
     FLAG:       'goal',
 }

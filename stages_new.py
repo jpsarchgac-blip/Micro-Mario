@@ -66,7 +66,7 @@ def _build_s1():
     return{
         'name':'1-1 GREEN HILL','bgm':'overworld','width':128,'rows':R,
         'time_limit':100,'terrain':t,'water':False,'gravity_scale':1.0,
-        'start_col':2,'start_row':R-4,'goal_col':118,
+        'start_col':2,'start_row':R-4,'goal_col':118,'flag_col':117,
         'pipe_col':38,'pipe_dest':'substage','pipe_return_col':64,
         'objects':[
             (8,6,'qblock_random'),
@@ -92,8 +92,8 @@ def _build_s2():
     for _ in range(3): t.append(uc(A,A,A,A,A,A,A,A))
     # Phase2: トゲ地帯(25-49)
     for _ in range(5): t.append(uc(A,A,A,A,A,A,A,A))
-    t.append(_c(R,G,G,A,A,A,A,A,A,S,A,G,G))  # トゲ
-    t.append(_c(R,G,G,A,A,A,A,A,A,S,A,G,G))
+    t.append(_c(R,G,G,A,A,A,A,A,A,A,S,G,G))  # トゲ
+    t.append(_c(R,G,G,A,A,A,A,A,A,A,S,G,G))
     for _ in range(6): t.append(uc(A,A,A,A,A,A,A,A))  # 休憩
     t.append(uc(A,A,A,Q,A,A,A,A))  # ?ブロック
     for _ in range(5): t.append(uc(A,A,A,A,A,A,A,A))
@@ -102,8 +102,8 @@ def _build_s2():
     for _ in range(5): t.append(uc(A,A,A,A,A,A,A,A))
     for _ in range(4): t.append(_c(R,G,G,B,A,A,A,A,B,A,A,G,G))  # 狭路
     for _ in range(8): t.append(uc(A,A,A,A,A,A,A,A))  # 休憩
-    t.append(_c(R,G,G,A,A,A,A,A,A,S,A,G,G))  # トゲ
-    t.append(_c(R,G,G,A,A,A,A,A,A,S,A,G,G))
+    t.append(_c(R,G,G,A,A,A,A,A,A,A,S,G,G))  # トゲ
+    t.append(_c(R,G,G,A,A,A,A,A,A,A,S,G,G))
     for _ in range(5): t.append(uc(A,A,A,A,A,A,A,A))
     # Phase4-5: ゴール(75-127)
     for _ in range(10): t.append(uc(A,A,A,A,A,A,A,A))
@@ -199,7 +199,7 @@ def _build_s4():
     return{
         'name':'1-4 SKY ZONE','bgm':'sky','width':128,'rows':R,
         'time_limit':120,'terrain':t,'water':False,'gravity_scale':1.0,
-        'start_col':2,'start_row':R-6,'goal_col':110,
+        'start_col':2,'start_row':R-6,'goal_col':110,'flag_col':110,
         'objects':[
             (35,6,'qblock_random'),
             (15,8,'pata_new'),(30,4,'pata_new'),(50,6,'killer_spawn'),
@@ -239,7 +239,7 @@ def _build_s5():
     return{
         'name':'1-5 CASTLE WALL','bgm':'castle','width':128,'rows':R,
         'time_limit':100,'terrain':t,'water':False,'gravity_scale':1.0,
-        'start_col':2,'start_row':R-4,'goal_col':110,
+        'start_col':2,'start_row':R-4,'goal_col':110,'flag_col':110,
         'objects':[
             (55,5,'qblock_random'),
             (20,R-3,'goomba'),(40,R-3,'goomba'),(50,4,'killer_spawn'),

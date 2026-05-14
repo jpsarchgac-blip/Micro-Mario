@@ -10,11 +10,9 @@ def draw_mode_select(oled,bank,cursor,blink):
     oled.rect(2,2,124,60,1)
     rd.draw_text(oled,bank,'MICRO MARIO',_cx('MICRO MARIO'),4)
     oled.hline(2,13,124,1)
-    rd.draw_text(oled,bank,'SELECT MODE',_cx('SELECT MODE'),16)
-    
-    labels=['OLD MODE','NEW MODE','MUSIC MODE','OPTION MODE']
+    labels=['OLD MODE','NEW MODE','MUSIC MODE','OPTION MODE','TEST MODE']
     for i,lb in enumerate(labels):
-        y=28+i*8
+        y=16+i*8
         if cursor==i and (blink>>2)&1:
             oled.fill_rect(24,y-1,80,9,1)
         rd.draw_text(oled,bank,lb,_cx(lb),y)
@@ -47,7 +45,7 @@ def draw_option_menu(oled,bank,vol):
     # Vol meter 0..10
     bar_w=80; bar_x=24; bar_y=36
     oled.rect(bar_x,bar_y,bar_w,6,1)
-    fill_w=int((vol/10)*bar_w)
+    fill_w=int((vol/20)*bar_w)
     if fill_w>0:
         oled.fill_rect(bar_x,bar_y,fill_w,6,1)
         
@@ -122,6 +120,23 @@ def draw_pipe_transition(oled,bank,frame,entering=True):
         rd.draw_text(oled,bank,'GOING DOWN!',_cx('GOING DOWN!'),2)
     else:
         rd.draw_text(oled,bank,'GOING UP!',_cx('GOING UP!'),2)
+
+def draw_flag_anim(oled,bank,world,cam_x,cam_y,flag_col,frame):
+    """旗降下アニメ。frame 20-49で旗マーカーがポール上から降りる。"""
+    import config as C
+    sx=flag_col*C.TILE-cam_x
+    if sx<-8 or sx>=C.SCREEN_W+8:return
+    pole_top=max(9,4*C.TILE-cam_y)
+    pole_bot=min(C.SCREEN_H-4,(world.rows-4)*C.TILE-cam_y)
+    if frame<20:return
+    if frame<50:
+        t=frame-20
+        flag_y=pole_top+(pole_bot-pole_top)*t//30
+    else:
+        flag_y=pole_bot
+    fx=sx+C.TILE;fy=int(flag_y)
+    if 0<=fx<C.SCREEN_W-4 and 9<=fy<C.SCREEN_H-3:
+        oled.fill_rect(fx,fy,5,4,1)
 
 def draw_stage_intro_new(oled,bank,stage_num,lives,diff_name):
     oled.fill(0)
