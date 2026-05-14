@@ -255,10 +255,11 @@ class Player:
             oled.blit(fb[key], sx, sy)
         else:
             # BIG / FIRE: 8x16(上下2枚)
-            top_key = 'mario_f_top' if self.state == STATE_FIRE else 'mario_b_top'
             if not self.on_ground:
-                bot_key = 'mario_b_bot'
+                top_key = 'mario_b_top_jump'
+                bot_key = 'mario_b_bot_jump'
             else:
+                top_key = 'mario_f_top' if self.state == STATE_FIRE else 'mario_b_top'
                 bot_key = 'mario_b_bot2' if (self.anim_tick >> 2) & 1 else 'mario_b_bot'
             oled.blit(fb[top_key], sx, sy)
             oled.blit(fb[bot_key], sx, sy + 8)

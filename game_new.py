@@ -11,7 +11,7 @@ import ui_new as ui
 S_TITLE='t';S_MODE='m';S_DIFF='d';S_INTRO='i';S_PAN='pan'
 S_PLAY='p';S_DIE='die';S_PAUSE='pau';S_CLEAR='cl'
 S_OVER='ov';S_END='end';S_PIPE_IN='pi';S_PIPE_P='pp';S_PIPE_OUT='po'
-S_MUSIC='mus';S_OPTION='opt'
+S_MUSIC='mus';S_OPTION='opt';S_FLAG='fl'
 
 class GameNew:
  def __init__(s,oled,bank,inp,audio,fx):
@@ -23,7 +23,7 @@ class GameNew:
   s.mode_cur=1;s.diff_cur=1;s.diff=C.DIFF_NORMAL
   s.coins=0;s.coins_max=0;s.deaths=0
   s.crowns=_load_cr()
-  s.star_t=0;s.slot_f=0;s.slot_r=0
+  s.star_t=0;s.slot_f=0;s.slot_r=0;s._pending_item=None
   s.pipe_f=0;s.pipe_world=None;s._pipe_near_exit=False
   s.main_world=None;s.main_cam=0;s.main_ents=[]
   s._ending=None
@@ -55,6 +55,7 @@ class GameNew:
   elif st==S_PIPE_OUT:s._u_pipeout()
   elif st==S_MUSIC:s._u_music()
   elif st==S_OPTION:s._u_option()
+  elif st==S_FLAG:s._u_flag()
   s.audio.update()
   if s.audio.beat_pulse:s.fx.beat()
   s.fx.update(s.frame)
@@ -73,6 +74,7 @@ class GameNew:
   elif st==S_MUSIC:ui.draw_music_player(o,s.bank,s.music_list[s.music_cur],s.music_playing)
   elif st==S_OPTION:ui.draw_option_menu(o,s.bank,int(s.audio.master_volume*10))
   elif st==S_END:s._d_end()
+  elif st==S_FLAG:s._d_flag()
   o.show()
  def _start(s,num):
   sd=sn.get_stage_new(num)
@@ -178,6 +180,7 @@ class GameNew:
   if s.inp.pressed(0):
    s.audio.play_sfx('select');s.diff=C.DIFFICULTIES[s.diff_cur]
    s.lives=s.diff['lives'];s.score=0;s.sn=1;s.deaths=0;s.coins=0;s.coins_max=0
+   s.fx.set_difficulty(s.diff['name'])
    s.audio.stop_bgm();s._cs(S_INTRO)
  def _u_intro(s):
   if s.st_t==0:s._start(s.sn);s.audio.pause_bgm()
@@ -218,6 +221,7 @@ class GameNew:
    if e.alive:e.update(s.world,s.player)
   for f in s.fbs:
    if f.alive:f.update(s.world,s.player)
+  s._tick_slot()
   if s.player.state!=pl.STATE_DEAD:s._collide()
   s._fb_collide()
   s.ents=[e for e in s.ents if e.alive];s.fbs=[f for f in s.fbs if f.alive]
@@ -255,32 +259,46 @@ class GameNew:
   tid=s.world.tile_at(col,hr)
   if tid==wn.QBLOCK:
    s.world.set_tile(col,hr,wn.QUSED);s.audio.play_sfx('bump');s.score+=C.SCORE_BLOCK
-   s._spawn_random_item(col,hr)
+   s._start_slot(col,hr)
   elif tid==wn.BRICK:
    if s.player.state!=pl.STATE_SMALL:
     s.world.set_tile(col,hr,wn.AIR);s.audio.play_sfx('brick_break');s.score+=C.SCORE_BLOCK
    else:s.audio.play_sfx('bump')
- def _spawn_random_item(s,col,row):
+ def _start_slot(s,col,row):
   import urandom
-  r=urandom.getrandbits(7)%100;sx=col*C.TILE;sy=(row-1)*C.TILE
-  p=C.QBLOCK_PROBS
-  s.slot_f=90  # スロット演出開始(60フレームスピン→30フレーム結果表示)
-  if r<p[0]:
-   s.slot_r=0
+  r=urandom.getrandbits(7)%100;p=C.QBLOCK_PROBS
+  if r<p[0]:it=0
+  elif r<p[1]:it=1
+  elif r<p[2]:it=2
+  elif r<p[3]:it=3
+  else:it=4
+  s._pending_item=(it,col*C.TILE,(row-1)*C.TILE)
+  s.slot_f=90;s.slot_r=urandom.getrandbits(3)%5
+  s.fx.set_slot_spin(True);s.audio.play_sfx('slot_tick')
+ def _tick_slot(s):
+  if s.slot_f<=0:return
+  if s.slot_f==30:
+   if s._pending_item:s.slot_r=s._pending_item[0]
+   s.fx.set_slot_spin(False);s.audio.play_sfx('slot_ding')
+  elif s.slot_f>30 and s.slot_f%8==0:
+   import urandom
+   s.slot_r=urandom.getrandbits(3)%5;s.audio.play_sfx('slot_tick')
+  if s.slot_f==1:s._apply_pending_item()
+  s.slot_f-=1
+ def _apply_pending_item(s):
+  if s._pending_item is None:return
+  it,sx,sy=s._pending_item;s._pending_item=None
+  if it==0:
    if s.player.state==pl.STATE_SMALL:s.ents.append(et.Mushroom(sx,sy))
    else:s.score+=C.SCORE_COIN;s.coins+=1
    s.audio.play_sfx('powerup');s.fx.rainbow(20)
-  elif r<p[1]:
-   s.slot_r=1
+  elif it==1:
    s.ents.append(et.FireFlower(sx,sy));s.audio.play_sfx('powerup');s.fx.rainbow(20)
-  elif r<p[2]:
-   s.slot_r=2
+  elif it==2:
    s.ents.append(et.OneUp(sx,sy));s.audio.play_sfx('1up')
-  elif r<p[3]:
-   s.slot_r=3
+  elif it==3:
    s.score+=C.SCORE_COIN;s.coins+=1;s.audio.play_sfx('coin');s.fx.event_flash((40,35,0),6)
   else:
-   s.slot_r=4
    s.ents.append(en.StarItem(sx,sy));s.audio.play_sfx('powerup');s.fx.rainbow(30)
  def _coin_pick(s):
   px,py,pw,ph=s.player.aabb()
@@ -359,10 +377,15 @@ class GameNew:
      elif isinstance(e,et.Boss):f.alive=False;s.score+=200;s.audio.play_sfx('boss_hit')
      break
  def _on_clear(s):
-  s.audio.stop_bgm();s.audio.play_sfx('stage_clear');s.fx.rainbow(60)
-  s.score+=s.tl*C.TIME_BONUS
-  if s.tl>=C.GOAL_BONUS_TIME_THRESH:s.lives=min(C.MAX_LIVES,s.lives+1)
-  s._cs(S_CLEAR)
+  sd=sn.get_stage_new(s.sn)
+  fc=sd.get('flag_col',-1) if sd else -1
+  if fc>0 and s.st!=S_FLAG:
+   s._cs(S_FLAG);s.fx.set_goal_flash(90)
+  else:
+   s.audio.stop_bgm();s.audio.play_sfx('stage_clear');s.fx.rainbow(60)
+   s.score+=s.tl*C.TIME_BONUS
+   if s.tl>=C.GOAL_BONUS_TIME_THRESH:s.lives=min(C.MAX_LIVES,s.lives+1)
+   s._cs(S_CLEAR)
  def _enter_pipe(s,sd):
   s.audio.play_sfx('pipe');s.main_world=s.world;s.main_cam=s.cam_x
   s.main_ents=s.ents;s._cs(S_PIPE_IN);s.pipe_f=0
@@ -434,7 +457,36 @@ class GameNew:
   if s.slot_f>0:
    settled=s.slot_f<=30
    ui.draw_item_slot(o,s.bank,s.slot_f,s.slot_r,settled)
-   s.slot_f-=1
+ def _u_flag(s):
+  s.st_t+=1
+  sd=sn.get_stage_new(s.sn)
+  fc=sd.get('flag_col',s.world.width-10)
+  if s.st_t==1:s.audio.play_sfx('flag_slide')
+  if s.st_t==30:s.audio.play_bgm('fanfare')
+  if s.st_t<=20:
+   target=float(fc*C.TILE)
+   if s.player.x<target:s.player.x=min(s.player.x+1.5,target)
+  elif s.st_t<=70:
+   s.player.vx=0;s.player.vy=0
+  else:
+   s.player.x+=1.5
+  if s.st_t>=90:
+   s.audio.stop_bgm();s.score+=s.tl*C.TIME_BONUS
+   if s.tl>=C.GOAL_BONUS_TIME_THRESH:s.lives=min(C.MAX_LIVES,s.lives+1)
+   s.audio.play_sfx('stage_clear');s._cs(S_CLEAR)
+ def _d_flag(s):
+  o=s.oled;sd=sn.get_stage_new(s.sn)
+  fc=sd.get('flag_col',s.world.width-10)
+  s.world.draw(o,s.bank,s.cam_x,s.cam_y,s.frame)
+  for e in s.ents:
+   if e.alive and hasattr(e,'draw'):e.draw(o,s.bank,s.cam_x,s.cam_y)
+  ui.draw_flag_anim(o,s.bank,s.world,s.cam_x,s.cam_y,fc,s.st_t)
+  if 50<=s.st_t<=70:
+   sx=int(s.player.x)-s.cam_x-1;sy=int(s.player.y)-s.cam_y
+   o.blit(s.bank.fb['mario_flag'],sx,sy)
+  else:
+   s.player.draw(o,s.bank,s.cam_x,s.cam_y)
+  ui.draw_header_new(o,s.bank,s.score,s.lives,s.tl,str(s.sn),s.coins)
  def _d_clear(s):
   o=s.oled;o.fill(0);o.rect(4,6,120,52,1)
   rd.draw_text(o,s.bank,'STAGE CLEAR!',28,12)

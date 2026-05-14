@@ -123,6 +123,23 @@ def draw_pipe_transition(oled,bank,frame,entering=True):
     else:
         rd.draw_text(oled,bank,'GOING UP!',_cx('GOING UP!'),2)
 
+def draw_flag_anim(oled,bank,world,cam_x,cam_y,flag_col,frame):
+    """旗降下アニメ。frame 20-49で旗マーカーがポール上から降りる。"""
+    import config as C
+    sx=flag_col*C.TILE-cam_x
+    if sx<-8 or sx>=C.SCREEN_W+8:return
+    pole_top=max(9,4*C.TILE-cam_y)
+    pole_bot=min(C.SCREEN_H-4,(world.rows-4)*C.TILE-cam_y)
+    if frame<20:return
+    if frame<50:
+        t=frame-20
+        flag_y=pole_top+(pole_bot-pole_top)*t//30
+    else:
+        flag_y=pole_bot
+    fx=sx+C.TILE;fy=int(flag_y)
+    if 0<=fx<C.SCREEN_W-4 and 9<=fy<C.SCREEN_H-3:
+        oled.fill_rect(fx,fy,5,4,1)
+
 def draw_stage_intro_new(oled,bank,stage_num,lives,diff_name):
     oled.fill(0)
     oled.rect(10,10,108,44,1)

@@ -14,51 +14,31 @@
 # MONO_VLSB: 1バイト=縦8px、LSB=一番上
 # 列0(左)→列7(右)の順で8バイト
 #
-# チビマリオ 右向き:
-#  col:  0     1     2     3     4     5     6     7
-#  bit0  .     .     .     H     H     H     .     .   ← 帽子
-#  bit1  .     H     H     H     H     H     H     .   ← 帽子つば
-#  bit2  .     S     S     E     .     E     S     .   ← 肌・目
-#  bit3  .     B     B     B     B     B     B     .   ← 胴体
-#  bit4  O     O     O     O     O     O     O     O   ← ズボン
-#  bit5  O     O     O     O     O     O     O     O   ← ズボン
-#  bit6  .     L     .     .     .     .     R     .   ← 脚
-#  bit7  .     L     .     .     .     .     R     .   ← 脚
-# H=帽子 S=肌 E=目(白抜き) B=胴体 O=ズボン L=左脚 R=右脚
-# 右向き立ち
-# MONO_VLSB: bit0=最上行、bit7=最下行
-# row0: 帽子(col2-5に帽子), row1: 帽子つば, row2: 顔・目
-# row3-4: オーバーオール, row5-6: 脚
-#
-#       col0  col1  col2  col3  col4  col5  col6  col7
-# row0   .     .     H     H     H     H     .     .   帽子
-# row1   .     H     H     H     H     H     H     .   帽子つば
-# row2   .     S     .     E     S     E     S     .   肌・目
-# row3   .     B     B     B     B     B     B     .   胴上
-# row4   P     P     P     P     P     P     P     P   ズボン
-# row5   .     .     L     .     .     R     .     .   脚
-# row6   .     .     L     .     .     R     .     .   脚
-# row7   .     .     .     .     .     .     .     .   (余白)
+# 右向き立ち: 帽子(rows0-1)・顔+目(row2)・髭(row3)・体(rows4-5)・脚(rows6-7)
 MARIO_SMALL_R = bytes([
-    #   0     1     2     3     4     5     6     7
-    0x00, 0x06, 0x3E, 0x3E, 0x3E, 0x3E, 0x06, 0x00,
+    0x20, 0xF6, 0x3E, 0x3B, 0x7F, 0xB3, 0x06, 0x00,
 ])
-# 左向き
+# 左向き (RのXミラー)
 MARIO_SMALL_L = bytes([
-    0x00, 0x60, 0x7C, 0x7C, 0x7C, 0x7C, 0x60, 0x00,
+    0x00, 0x06, 0xB3, 0x7F, 0x3B, 0x3E, 0xF6, 0x20,
 ])
 
-# 歩行2フレーム目(脚が開く)
+# 歩行2フレーム目(脚を逆に広げる)
 MARIO_SMALL_R2 = bytes([
-    0x00, 0x06, 0x3E, 0x3E, 0x3E, 0x3E, 0x46, 0x40,
+    0x20, 0x36, 0xFE, 0x3B, 0x3F, 0x33, 0xC6, 0x00,
 ])
 MARIO_SMALL_L2 = bytes([
-    0x02, 0x62, 0x7C, 0x7C, 0x7C, 0x7C, 0x60, 0x00,
+    0x00, 0xC6, 0x33, 0x3F, 0x3B, 0xFE, 0x36, 0x20,
 ])
 
-# ジャンプ中(両脚を引き上げ)
+# ジャンプ中(足を広げて引き上げ)
 MARIO_SMALL_JUMP = bytes([
-    0x00, 0x46, 0x7E, 0x7E, 0x7E, 0x7E, 0x46, 0x00,
+    0x80, 0x76, 0x7E, 0x3B, 0x7F, 0x72, 0x06, 0x80,
+])
+
+# しゃがみ(帽子を下に下げたコンパクト体型)
+MARIO_SMALL_CROUCH = bytes([
+    0x40, 0x6C, 0x7E, 0x76, 0x7E, 0x66, 0x0C, 0x00,
 ])
 
 # 死亡(逆さ・星マーク)
@@ -67,30 +47,45 @@ MARIO_DEAD = bytes([
 ])
 
 # ========== プレイヤー(BIG/FIRE) 8x16 ==========
-# 上半身(8x8): 帽子・顔  MONO_VLSB bit0=上
-# row0-1: 帽子(col2-5)
-# row2:   帽子つば(col1-6)
-# row3-4: 顔・肌(col1-6)・目(col2,col5)
-# row5-7: 口ひげ・あご
+# 上半身(8x8): 帽子・顔・体  下半身(8x8): 脚・ブーツ
 MARIO_BIG_TOP_R = bytes([
-    #   0     1     2     3     4     5     6     7
-    0x00, 0x04, 0x7E, 0x7E, 0x7E, 0x7E, 0x04, 0x00,
+    0x00, 0x36, 0xFE, 0xFB, 0xFF, 0xF3, 0xC6, 0x00,
 ])
-# 下半身(8x8): 胴体・ズボン・脚
 MARIO_BIG_BOT_R = bytes([
-    0x00, 0x7E, 0xFF, 0xFF, 0xFF, 0xFF, 0x7E, 0x00,
+    0x03, 0xFF, 0xFF, 0xC3, 0x03, 0xFF, 0xFF, 0x03,
 ])
 MARIO_BIG_TOP_L = MARIO_BIG_TOP_R
 MARIO_BIG_BOT_L = MARIO_BIG_BOT_R
 
-# 歩行2フレーム(脚を広げる)
+# 歩行2フレーム(右足を前に踏み出す)
 MARIO_BIG_BOT_R2 = bytes([
-    0x00, 0x3E, 0xFF, 0xFF, 0xFF, 0xFF, 0x7C, 0x40,
+    0x03, 0xFF, 0xFF, 0xC3, 0x7F, 0x3F, 0x03, 0x03,
 ])
 
-# FIREマリオ(白い帽子)
+# ジャンプ: 上半身(腕を広げる) + 下半身(足を引き上げる)
+MARIO_BIG_TOP_JUMP = bytes([
+    0x10, 0x36, 0xFE, 0xFB, 0xFF, 0xF3, 0xC6, 0x10,
+])
+MARIO_BIG_BOT_JUMP = bytes([
+    0x0F, 0x1B, 0x03, 0x03, 0x03, 0x03, 0x1B, 0x0F,
+])
+
+# しゃがみ: 上半身(体を低く) + 下半身(ワイドスタンス)
+MARIO_BIG_CROUCH_TOP = bytes([
+    0xC0, 0xEC, 0xFE, 0xF6, 0xFE, 0xE4, 0x0C, 0x00,
+])
+MARIO_BIG_CROUCH_BOT = bytes([
+    0x01, 0x3F, 0x2F, 0x07, 0x07, 0x3F, 0x07, 0x01,
+])
+
+# FIREマリオ(帽子が全面リット = 白い帽子)
 MARIO_FIRE_TOP_R = bytes([
-    0x00, 0x74, 0x7E, 0x7E, 0x7E, 0x7E, 0x74, 0x00,
+    0x00, 0x36, 0xFE, 0xFF, 0xFF, 0xF3, 0xC6, 0x00,
+])
+
+# 旗ポールを掴む姿(右手が右に伸びる)
+MARIO_FLAG = bytes([
+    0x20, 0xF6, 0x3E, 0x3B, 0x77, 0xA3, 0x0E, 0x08,
 ])
 
 # ========== タイル 8x8 ==========
@@ -98,14 +93,14 @@ TILE_GROUND = bytes([
     0xFF, 0x81, 0xBD, 0xA5, 0xA5, 0xBD, 0x81, 0xFF,
 ])
 TILE_BRICK = bytes([
-    0xFF, 0x81, 0xFD, 0x81, 0xFF, 0x81, 0xBF, 0x81,
+    0xF9, 0xFF, 0x8F, 0xFF, 0xF9, 0xFF, 0x8F, 0xFF,
 ])
 TILE_QBLOCK = bytes([
-    0xFF, 0x81, 0xBD, 0xA5, 0xB5, 0xBD, 0x81, 0xFF,
+    0xFF, 0x81, 0x81, 0xDB, 0x87, 0x81, 0x81, 0xFF,
 ])
-# 叩いた後の?ブロック(空きブロック)
+# 叩いた後の?ブロック(チェッカー柄で「空」を表現)
 TILE_QBLOCK_USED = bytes([
-    0xFF, 0x81, 0xBD, 0x81, 0x81, 0xBD, 0x81, 0xFF,
+    0xFF, 0xAB, 0xD5, 0xAB, 0xD5, 0xAB, 0xD5, 0xFF,
 ])
 TILE_PIPE_TL = bytes([
     0x00, 0xFF, 0x81, 0xBD, 0xBD, 0xBD, 0xBD, 0xBD,
@@ -120,7 +115,7 @@ TILE_PIPE_BR = bytes([
     0xBD, 0xBD, 0xBD, 0xBD, 0xBD, 0xBD, 0xFF, 0xFF,
 ])
 TILE_COIN = bytes([
-    0x18, 0x3C, 0x66, 0x66, 0x66, 0x66, 0x3C, 0x18,
+    0x3C, 0x7E, 0xC3, 0xBD, 0xBD, 0xC3, 0x7E, 0x3C,
 ])
 TILE_SPIKE = bytes([
     0x80, 0xC0, 0xE0, 0xF8, 0xF8, 0xE0, 0xC0, 0x80,
@@ -129,7 +124,7 @@ TILE_CLOUD_PLAT = bytes([
     0x00, 0xFC, 0xFE, 0xFF, 0xFF, 0xFE, 0xFC, 0x00,
 ])
 TILE_GOAL = bytes([
-    0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18,
+    0x00, 0x80, 0x80, 0xFF, 0x81, 0x81, 0x80, 0x00,
 ])
 
 # ========== 敵 8x8 ==========
@@ -316,16 +311,22 @@ CROWN_MINI = bytes([0x00, 0x44, 0x6C, 0x7C, 0x7C, 0x6C, 0x44, 0x00])
 
 # ========== タイル名→data辞書(SpriteBankで使う) ==========
 TILE_SPRITES = {
-    'mario_s_r':    MARIO_SMALL_R,
-    'mario_s_l':    MARIO_SMALL_L,
-    'mario_s_r2':   MARIO_SMALL_R2,
-    'mario_s_l2':   MARIO_SMALL_L2,
-    'mario_s_jump': MARIO_SMALL_JUMP,
-    'mario_dead':   MARIO_DEAD,
-    'mario_b_top':  MARIO_BIG_TOP_R,
-    'mario_b_bot':  MARIO_BIG_BOT_R,
-    'mario_b_bot2': MARIO_BIG_BOT_R2,
-    'mario_f_top':  MARIO_FIRE_TOP_R,
+    'mario_s_r':         MARIO_SMALL_R,
+    'mario_s_l':         MARIO_SMALL_L,
+    'mario_s_r2':        MARIO_SMALL_R2,
+    'mario_s_l2':        MARIO_SMALL_L2,
+    'mario_s_jump':      MARIO_SMALL_JUMP,
+    'mario_s_crouch':    MARIO_SMALL_CROUCH,
+    'mario_dead':        MARIO_DEAD,
+    'mario_b_top':       MARIO_BIG_TOP_R,
+    'mario_b_bot':       MARIO_BIG_BOT_R,
+    'mario_b_bot2':      MARIO_BIG_BOT_R2,
+    'mario_b_top_jump':  MARIO_BIG_TOP_JUMP,
+    'mario_b_bot_jump':  MARIO_BIG_BOT_JUMP,
+    'mario_b_crouch_top':MARIO_BIG_CROUCH_TOP,
+    'mario_b_crouch_bot':MARIO_BIG_CROUCH_BOT,
+    'mario_f_top':       MARIO_FIRE_TOP_R,
+    'mario_flag':        MARIO_FLAG,
 
     'ground':       TILE_GROUND,
     'brick':        TILE_BRICK,

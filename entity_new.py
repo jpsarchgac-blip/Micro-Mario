@@ -56,10 +56,11 @@ class PatapataNew:
             if self.y>world.map_h_px+16: self.alive=False
             return
         self.anim+=1
-        # 壁で反転 (collide_x が移動も担う)
+        # 壁で反転
+        target_x=self.x+self.vx
         nx=world.collide_x(self.x,self.y,self.w,self.h,self.vx)
-        if nx==self.x and self.vx!=0: self.vx=-self.vx
-        else: self.x=nx
+        if abs(nx-target_x)>0.01: self.vx=-self.vx
+        self.x=nx
     def draw(self,oled,bank,cam_x,cam_y=0):
         sx=int(self.x)-cam_x;sy=int(self.y)-cam_y
         if-8<=sx<=128 and -8<=sy<=64:
