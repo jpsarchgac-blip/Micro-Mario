@@ -14,6 +14,9 @@ import {
 import {
   TILE, createPlayer, stepPlayer, PlayerState, Input,
 } from "@/lib/physics";
+import { Enemy, buildEnemies, stepEnemies, resolveCollisions, collectCoins, eachVisibleEnemy } from "@/lib/enemies";
+import { spriteFor } from "@/lib/enemy-sprites";
+import { blitSprite } from "./drawing";
 
 const SCALE = 4;
 const FPS = 30;
@@ -44,9 +47,10 @@ interface EmuState {
   /** Selected stage number (1-indexed) */
   stageNum: number;
   isCustom: boolean;
-  /** Loaded stage data for the current play */
+  /** Loaded stage data for the current play (cloned terrain) */
   stage: Stage | null;
   player: PlayerState | null;
+  enemies: Enemy[];
   lives: number;
   score: number;
   coins: number;
@@ -56,6 +60,8 @@ interface EmuState {
   volume: number;        // 0..20
   quitHold: number;
   prevJump: boolean;
+  /** difficulty for enemy building */
+  diffKey: "easy" | "normal" | "hard";
 }
 
 const initialState = (): EmuState => ({
@@ -67,6 +73,7 @@ const initialState = (): EmuState => ({
   isCustom: false,
   stage: null,
   player: null,
+  enemies: [],
   lives: 3,
   score: 0,
   coins: 0,
@@ -76,6 +83,7 @@ const initialState = (): EmuState => ({
   volume: 10,
   quitHold: 0,
   prevJump: false,
+  diffKey: "normal",
 });
 
 const MODE_LABELS = ["OLD MODE", "NEW MODE", "CUSTOM MODE", "MUSIC MODE", "OPTION MODE", "TEST MODE"];
@@ -235,10 +243,12 @@ export function Emulator() {
     const stages = isCustom ? projectRef.current.stages : builtinRef.current;
     if (num < 1 || num > stages.length) return;
     stopBgm();
+    const diffKey = (["easy", "normal", "hard"] as const)[diffIdx];
     transitionTo("stage_intro", {
       stageNum: num,
       isCustom,
       diffIdx,
+      diffKey,
       lives: 3,
       score: 0,
       coins: 0,
@@ -246,6 +256,7 @@ export function Emulator() {
       tl: stages[num - 1].time_limit,
       stage: null,
       player: null,
+      enemies: [],
       prevJump: false,
       quitHold: 0,
     });
@@ -286,12 +297,14 @@ export function Emulator() {
           return false;
         case "stage_intro": {
           if (s.t === 1) {
-            // Initialize stage + player
+            // Initialize stage (with cloned terrain so coin pickups don't persist) + player + enemies
             const stages = s.isCustom ? projectRef.current.stages : builtinRef.current;
-            const stage = stages[s.stageNum - 1];
-            if (!stage) { stRef.current = { ...s, kind: "mode_select", t: 0 }; return true; }
+            const orig = stages[s.stageNum - 1];
+            if (!orig) { stRef.current = { ...s, kind: "mode_select", t: 0 }; return true; }
+            const stage: Stage = { ...orig, terrain: orig.terrain.map((c) => [...c]) };
             const player = createPlayer(stage);
-            stRef.current = { ...s, stage, player, tl: stage.time_limit, tsf: 0 };
+            const enemies = buildEnemies(stage, s.diffKey);
+            stRef.current = { ...s, stage, player, enemies, tl: stage.time_limit, tsf: 0 };
             // BGM
             const tr = getBgmTrack(stage.bgm, projectRef.current.bgm);
             if (tr) playBgm(tr, { loop: true });
@@ -320,10 +333,33 @@ export function Emulator() {
             s.quitHold = 0;
           }
           const res = stepPlayer(s.stage, projectRef.current.blocks, s.player, inp);
+
+          // Coin pickup (tile-based)
+          const collected = collectCoins(s.stage, projectRef.current.blocks, s.player);
+          if (collected > 0) {
+            s.score += 100 * collected;
+            s.coins += collected;
+            beepNote("E5", 40);
+          }
+
+          // Enemy AI + collision
+          stepEnemies(s.stage, projectRef.current.blocks, s.enemies);
+          const col = resolveCollisions(s.player, s.enemies);
+          if (col.stomped > 0) {
+            s.score += 200 * col.stomped;
+            beepNote("G5", 50);
+          }
+          if (col.bounced) beepNote("C6", 80);
+          if (col.damaged) beepNote("A3", 200);
+          // Clean dead enemies
+          if (s.enemies.length > 0 && s.enemies.some((e) => !e.alive)) {
+            s.enemies = s.enemies.filter((e) => e.alive);
+          }
+
           // Time tick
           s.tsf++;
           if (s.tsf >= FPS) { s.tsf = 0; s.tl--; if (s.tl <= 0) { stopBgm(); stRef.current = { ...s, kind: "game_over", t: 0 }; return true; } }
-          if (res.died) {
+          if (res.died || col.killed || s.player.state === "dead") {
             stopBgm();
             s.lives--;
             if (s.lives <= 0) { stRef.current = { ...s, kind: "game_over", t: 0 }; return true; }
@@ -560,23 +596,31 @@ function drawPlaying(
     }
   }
 
-  // Entities (visual markers only — no AI in browser)
-  const drawEnt = (col: number, row: number) => {
-    const sx = (col * TILE - camX) * SCALE;
-    const sy = (row * TILE - camY) * SCALE;
-    ctx.fillStyle = FG;
-    ctx.fillRect(sx + SCALE, sy + 2 * SCALE, 6 * SCALE, 5 * SCALE);
-    ctx.fillRect(sx + 2 * SCALE, sy, 4 * SCALE, 2 * SCALE);
-  };
-  for (const [c, r] of stage.objects) drawEnt(c, r);
-  const enemies = stage.enemy_sets?.normal ?? [];
-  for (const [c, r] of enemies) drawEnt(c, r);
+  // Live enemies (AI-driven)
+  eachVisibleEnemy(s.enemies, (e) => {
+    const sx = e.x - camX;
+    const sy = e.y - camY;
+    if (sx < -8 || sx > SCREEN_W || sy < -8 || sy > SCREEN_H) return;
+    if (e.type === "boss") {
+      // 24x24 boss: tile 3x3
+      const spr = spriteFor(e.type, false, e.anim);
+      for (let by = 0; by < 3; by++)
+        for (let bx = 0; bx < 3; bx++)
+          blitSprite(ctx, spr, Math.floor(sx) + bx * 8, Math.floor(sy) + by * 8, SCALE);
+      return;
+    }
+    const spr = spriteFor(e.type, e.squashedT > 0, e.anim);
+    blitSprite(ctx, spr, Math.floor(sx), Math.floor(sy), SCALE);
+  });
 
-  // Player (filled rect)
-  const px = (player.x - camX) * SCALE;
-  const py = (player.y - camY) * SCALE;
-  ctx.fillStyle = FG;
-  ctx.fillRect(px, py, player.w * SCALE, player.h * SCALE);
+  // Player (invincible: blink every other frame)
+  const blink = player.invincible > 0 && ((player.invincible & 2) === 0);
+  if (!blink) {
+    const px = (player.x - camX) * SCALE;
+    const py = (player.y - camY) * SCALE;
+    ctx.fillStyle = FG;
+    ctx.fillRect(px, py, player.w * SCALE, player.h * SCALE);
+  }
 
   // HUD: clear top 8 rows + redraw text
   fillRect(ctx, 0, 0, 128, 8, SCALE, false);
