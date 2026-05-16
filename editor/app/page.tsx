@@ -23,8 +23,8 @@ const TOOLS = [
   },
   {
     href: "/play",
-    title: "Play",
-    desc: "編集中のステージをブラウザでテストプレイ。物理は本家 player.py をミラー。",
+    title: "Emulator / Play",
+    desc: "実機と同じ画面(128×64)・モード選択をブラウザで体験。A/S/D または ←↓→ で操作。",
     icon: "🎮",
   },
 ];
