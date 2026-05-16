@@ -12,7 +12,7 @@ from auto_input import AutoInput
 S_TITLE='t';S_MODE='m';S_DIFF='d';S_INTRO='i';S_PAN='pan'
 S_PLAY='p';S_DIE='die';S_PAUSE='pau';S_CLEAR='cl'
 S_OVER='ov';S_END='end';S_PIPE_IN='pi';S_PIPE_P='pp';S_PIPE_OUT='po'
-S_MUSIC='mus';S_OPTION='opt';S_FLAG='fl';S_CUSTOM_SEL='cs'
+S_MUSIC='mus';S_OPTION='opt';S_FLAG='fl';S_CUSTOM_SEL='cs';S_BOSS_INTRO='bi'
 
 class GameNew:
  def __init__(s,oled,bank,inp,audio,fx):
@@ -64,6 +64,7 @@ class GameNew:
   elif st==S_OPTION:s._u_option()
   elif st==S_FLAG:s._u_flag()
   elif st==S_CUSTOM_SEL:s._u_custom_sel()
+  elif st==S_BOSS_INTRO:s._u_boss_intro()
   s.audio.update()
   if s.audio.beat_pulse:s.fx.beat()
   s.fx.update(s.frame)
@@ -88,6 +89,7 @@ class GameNew:
     ui.draw_custom_select(o,s.bank,s.custom_stages,s.custom_idx,s.frame)
    else:
     ui.draw_custom_empty(o,s.bank)
+  elif st==S_BOSS_INTRO:s._d_boss_intro()
   o.show()
  def _gst(s,num=None):
   """現在のモード(NEW or CUSTOM)に応じてステージdictを返す。"""
@@ -248,7 +250,38 @@ class GameNew:
   mx=max(0,gcol*C.TILE-C.SCREEN_W)
   if s.st_t<30:s.cam_x=int(mx*s.st_t/30)
   elif s.st_t<60:s.cam_x=int(mx*(60-s.st_t)/30)
-  else:s.cam_x=0;s._cs(S_PLAY)
+  else:
+   s.cam_x=0
+   # ボスステージはイントロ演出へ
+   if not s.custom_mode and s.sn==6:s._cs(S_BOSS_INTRO);s.audio.pause_bgm()
+   else:s._cs(S_PLAY)
+ def _u_boss_intro(s):
+  s.st_t+=1
+  # 0-20: カメラ右へパン(ボスを写す)
+  if s.st_t<=20:
+   s.cam_x=int(s.st_t*4)
+  # 20: 咆哮再生
+  if s.st_t==20:s.audio.play_sfx('boss_roar')
+  # 30-70: "BOSS BATTLE!" 点滅 + ジリジリ揺れ
+  if s.st_t==30:s.fx.set_damage()
+  # 80: BGM再開
+  if s.st_t==80:s.audio.resume_bgm();s.audio.play_bgm('boss')
+  # 100: カメラを戻して開始
+  if s.st_t>=100:s.cam_x=0;s._cs(S_PLAY)
+ def _d_boss_intro(s):
+  o=s.oled
+  s.world.draw(o,s.bank,s.cam_x,s.cam_y,s.frame)
+  for e in s.ents:
+   if e.alive and hasattr(e,'draw'):e.draw(o,s.bank,s.cam_x,s.cam_y)
+  s.player.draw(o,s.bank,s.cam_x,s.cam_y)
+  # 暗幕 (画面上下から黒)
+  o.fill_rect(0,0,128,8,0);o.fill_rect(0,56,128,8,0)
+  # "BOSS BATTLE" 点滅
+  if 30<=s.st_t<=80 and (s.st_t>>2)&1:
+   o.fill_rect(20,22,88,18,0);o.rect(20,22,88,18,1)
+   t1='BOSS BATTLE';t2='GET READY!'
+   rd.draw_text(o,s.bank,t1,(128-len(t1)*5)//2,26)
+   rd.draw_text(o,s.bank,t2,(128-len(t2)*5)//2,34)
  def _u_play(s):
   if s.inp.held(0)and s.inp.held(1)and s.inp.held(2):
    s._quit_hold+=1
@@ -266,6 +299,8 @@ class GameNew:
   s.player.update(s.inp,s._fire)
   if getattr(s.player,'_just_jumped',False):
    s.audio.play_sfx('jump_big'if s.player.state!=pl.STATE_SMALL else'jump_small')
+  if getattr(s.player,'_just_bounced',False):
+   s.audio.play_sfx('bounce');s.fx.rainbow(15)
   if getattr(s.player,'_fire_request',False):s.audio.play_sfx('fireball')
   if s.player.head_hit_col>=0:s._hit_block(s.player.head_hit_col)
   s._coin_pick()
@@ -324,6 +359,7 @@ class GameNew:
     s.world.set_tile(col,hr,wn.AIR);s.audio.play_sfx('brick_break');s.score+=C.SCORE_BLOCK
    else:s.audio.play_sfx('bump')
  def _start_slot(s,col,row):
+  # マリオカート式アイテムボックス: 短時間スピン → 確定 → 即取得
   import urandom
   r=urandom.getrandbits(7)%100;p=C.QBLOCK_PROBS
   if r<p[0]:it=0
@@ -332,16 +368,21 @@ class GameNew:
   elif r<p[3]:it=3
   else:it=4
   s._pending_item=(it,col*C.TILE,(row-1)*C.TILE)
-  s.slot_f=90;s.slot_r=urandom.getrandbits(3)%5
-  s.fx.set_slot_spin(True);s.audio.play_sfx('slot_tick')
+  s.slot_f=30;s.slot_r=urandom.getrandbits(3)%5
+  s.fx.set_slot_spin(True);s.fx.rainbow(30)
+  s.audio.play_sfx('item_get')
  def _tick_slot(s):
   if s.slot_f<=0:return
-  if s.slot_f==30:
+  # frames 30→16: 高速スピン (4F毎にランダム切替)
+  # frame 15: 結果確定、ファンファーレ
+  # frames 14→1: 確定アイコン表示 (キラキラ)
+  # frame 1: アイテム発動
+  if s.slot_f==15:
    if s._pending_item:s.slot_r=s._pending_item[0]
-   s.fx.set_slot_spin(False);s.audio.play_sfx('slot_ding')
-  elif s.slot_f>30 and s.slot_f%8==0:
+   s.fx.set_slot_spin(False)
+  elif s.slot_f>15 and s.slot_f%4==0:
    import urandom
-   s.slot_r=urandom.getrandbits(3)%5;s.audio.play_sfx('slot_tick')
+   s.slot_r=urandom.getrandbits(3)%5
   if s.slot_f==1:s._apply_pending_item()
   s.slot_f-=1
  def _apply_pending_item(s):

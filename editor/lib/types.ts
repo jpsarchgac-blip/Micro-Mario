@@ -1,7 +1,7 @@
 // Shared types for the Micro-Mario custom editor.
 // JSON shape mirrors custom_stages.py / docs/MAP_GUIDE.md
 
-export type BlockBehavior = "solid" | "platform" | "lethal" | "passable";
+export type BlockBehavior = "solid" | "platform" | "lethal" | "passable" | "bounce" | "ice";
 
 export interface BlockDef {
   /** Tile ID (16..255 for custom blocks; 0..15 are built-in). */

@@ -333,6 +333,15 @@ SFX_SLOT_DING  = [(523, 60), (659, 60), (784, 60), (0, 20), (1047, 160)]
 SFX_FLAG_SLIDE = _sweep(880, 220, 14, 320)
 SFX_LANDING    = _sweep(200, 100, 4, 40)
 SFX_GOAL_WALK  = [(320, 25), (0, 175)]
+# マリオカートのアイテムボックス取得風
+SFX_ITEM_GET   = [(523, 40), (659, 40), (784, 50), (1047, 50),
+                  (1319, 50), (1568, 80), (0, 30), (1568, 150)]
+# ボス登場時の咆哮 (低音→高音)
+SFX_BOSS_ROAR  = [(110, 180), (98, 150), (130, 180), (165, 200),
+                  (130, 150), (98, 200), (82, 250), (0, 80),
+                  (220, 100), (262, 100), (330, 200)]
+# バネ着地
+SFX_BOUNCE     = _sweep(330, 1320, 8, 120)
 
 SFX = {
     'jump_small':  SFX_JUMP_SMALL,
@@ -358,4 +367,7 @@ SFX = {
     'flag_slide':  SFX_FLAG_SLIDE,
     'landing':     SFX_LANDING,
     'goal_walk':   SFX_GOAL_WALK,
+    'item_get':    SFX_ITEM_GET,
+    'boss_roar':   SFX_BOSS_ROAR,
+    'bounce':      SFX_BOUNCE,
 }

@@ -42,14 +42,14 @@ def _hole(rows,n=1):
 #   'sprite': 8バイト (MONO_VLSB 8x8 ビットマップ)
 # }
 BUILTIN_BLOCKS = [
-    # ICE: 滑る氷(挙動はsolidと同じ、見た目だけ差別化)
-    {'id': ICE, 'name': 'tile_ice', 'behavior': 'solid',
+    # ICE: 滑る氷(慣性が増えて止まりにくい)
+    {'id': ICE, 'name': 'tile_ice', 'behavior': 'ice',
      'sprite': bytes([0xFF, 0x81, 0xBD, 0xA5, 0xA5, 0xBD, 0x81, 0xFF])},
     # SAND: 砂ブロック(solid、点描パターン)
     {'id': SAND, 'name': 'tile_sand', 'behavior': 'solid',
      'sprite': bytes([0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55])},
-    # BOUNCE: 半固体跳ねるプラットフォーム
-    {'id': BOUNCE, 'name': 'tile_bounce', 'behavior': 'platform',
+    # BOUNCE: バネ式プラットフォーム (上に着地すると高くジャンプ)
+    {'id': BOUNCE, 'name': 'tile_bounce', 'behavior': 'bounce',
      'sprite': bytes([0x18, 0x3C, 0x7E, 0xFF, 0xFF, 0x7E, 0x3C, 0x18])},
     # THORN: 横向きトゲ(lethal、立て横二段スパイク)
     {'id': THORN, 'name': 'tile_thorn', 'behavior': 'lethal',
@@ -204,12 +204,22 @@ def _register_block(bank, b):
     wn.SOLID_TILES.discard(bid)
     wn.PLATFORM_TILES.discard(bid)
     wn.LETHAL_TILES.discard(bid)
+    wn.BOUNCE_TILES.discard(bid)
+    wn.ICE_TILES.discard(bid)
     if behavior == 'solid':
         wn.SOLID_TILES.add(bid)
     elif behavior == 'platform':
         wn.PLATFORM_TILES.add(bid)
     elif behavior == 'lethal':
         wn.LETHAL_TILES.add(bid)
+    elif behavior == 'bounce':
+        # bounce は platform 兼 BOUNCE_TILES (上から着地でバネジャンプ)
+        wn.PLATFORM_TILES.add(bid)
+        wn.BOUNCE_TILES.add(bid)
+    elif behavior == 'ice':
+        # 滑りやすい固体
+        wn.SOLID_TILES.add(bid)
+        wn.ICE_TILES.add(bid)
     # passable は何処にも入れない
 
 

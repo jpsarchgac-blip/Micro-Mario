@@ -11,6 +11,12 @@
 import config as C
 import stages as st
 
+# world_new はNEW/CUSTOMモードでのみ使われる。OLDモードは world.py なのでセット属性なし。
+try:
+    import world_new as _wn
+except ImportError:
+    _wn = None
+
 
 STATE_SMALL = 'small'
 STATE_BIG   = 'big'
@@ -44,6 +50,8 @@ class Player:
         self.dead_timer = 0
         self.run_charge = 0   # ダッシュ加速チャージ
         self.crouching = False  # しゃがみ状態
+        self._on_ice = False   # 氷タイル上 (前フレーム判定)
+        self._just_bounced = False
 
         # 物理パラメータ(ステージで上書き可能)
         self.gravity_scale = 1.0
@@ -157,7 +165,8 @@ class Player:
                 self.crouching = True
                 self.h = 8
                 self.y += 8  # 縮んだ分だけ下げて地面に接地を維持
-            target_vx = C.CROUCH_WALK_SPEED
+            # 氷上ではしゃがみ減速無効 (フルスピードでスライド)
+            target_vx = base_vx if self._on_ice else C.CROUCH_WALK_SPEED
         else:
             if self.crouching:
                 # 立ち上がる前に頭上スペースを確認(低天井下では強制継続)
@@ -249,6 +258,25 @@ class Player:
             self.on_ground = True
         else:
             self.on_ground = False
+
+        # ---- 特殊タイル挙動 (BOUNCE / ICE、NEW/CUSTOMモード限定) ----
+        self._on_ice = False
+        self._just_bounced = False
+        if self.on_ground and _wn is not None:
+            foot_row = int(self.y + self.h) // C.TILE
+            left  = int(self.x) // C.TILE
+            right = int(self.x + self.w - 1) // C.TILE
+            bounce_hit = False
+            for c in range(left, right + 1):
+                tid = self.world.tile_at(c, foot_row)
+                if tid in _wn.BOUNCE_TILES:
+                    bounce_hit = True
+                if tid in _wn.ICE_TILES:
+                    self._on_ice = True
+            if bounce_hit:
+                self.vy = -5.2
+                self.on_ground = False
+                self._just_bounced = True
 
         self.head_hit_col = head_col   # Gameが見て?ブロック処理
 

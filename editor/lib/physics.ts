@@ -71,17 +71,23 @@ function tileAt(stage: Stage, col: number, row: number): number {
 
 function isSolid(stage: Stage, col: number, row: number, blocks: import("./types").BlockDef[]): boolean {
   const t = tileAt(stage, col, row);
-  return behaviorOf(t, blocks) === "solid";
+  const b = behaviorOf(t, blocks);
+  return b === "solid" || b === "ice";
 }
 
 function isPlatform(stage: Stage, col: number, row: number, blocks: import("./types").BlockDef[]): boolean {
   const t = tileAt(stage, col, row);
-  return behaviorOf(t, blocks) === "platform";
+  const b = behaviorOf(t, blocks);
+  return b === "platform" || b === "bounce";
 }
 
 function isLethal(stage: Stage, col: number, row: number, blocks: import("./types").BlockDef[]): boolean {
   const t = tileAt(stage, col, row);
   return behaviorOf(t, blocks) === "lethal";
+}
+
+function tileBehaviorAt(stage: Stage, col: number, row: number, blocks: import("./types").BlockDef[]) {
+  return behaviorOf(tileAt(stage, col, row), blocks);
 }
 
 function collideX(stage: Stage, blocks: import("./types").BlockDef[], px: number, py: number, w: number, h: number, dx: number): number {
@@ -216,6 +222,24 @@ export function stepPlayer(
   const cy = collideY(stage, blocks, p.x, p.y, p.w, p.h, p.vy);
   p.y = cy.newY;
   if (cy.onGround) { p.vy = 0; p.onGround = true; } else p.onGround = false;
+
+  // Special tile feedback (BOUNCE / ICE) - check feet row
+  if (p.onGround) {
+    const footRow = Math.floor((p.y + p.h) / TILE);
+    const lc = Math.floor(p.x / TILE);
+    const rc = Math.floor((p.x + p.w - 1) / TILE);
+    let bounced = false;
+    (p as PlayerState & { onIce?: boolean }).onIce = false;
+    for (let c = lc; c <= rc; c++) {
+      const b = tileBehaviorAt(stage, c, footRow, blocks);
+      if (b === "bounce") bounced = true;
+      if (b === "ice") (p as PlayerState & { onIce?: boolean }).onIce = true;
+    }
+    if (bounced) {
+      p.vy = -5.2;
+      p.onGround = false;
+    }
+  }
 
   // Lethal tile
   const left = Math.floor(p.x / TILE);

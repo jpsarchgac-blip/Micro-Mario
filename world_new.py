@@ -25,6 +25,10 @@ FLAG   = 15
 SOLID_TILES = {GROUND, BRICK, QBLOCK, PIPE_TL, PIPE_TR, PIPE_BL, PIPE_BR, QUSED, GRASS}
 PLATFORM_TILES = {CLOUD_PLAT}
 LETHAL_TILES = {SPIKE, MAGMA}
+# 着地でプレイヤーを高くバウンドさせるタイル(カスタムブロック用)
+BOUNCE_TILES = set()
+# 接触で滑りやすくなるタイル(慣性追加、カスタムブロック用)
+ICE_TILES = set()
 
 # タイルID → スプライト名
 _TILE_NAME = {

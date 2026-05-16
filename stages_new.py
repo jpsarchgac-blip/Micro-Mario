@@ -62,9 +62,9 @@ def _build_s1():
     t.append(_c(R,A,A,A,A,A,A,A,A,A,G,A,A))             # 41
     t+=_hole(R,2)                                        # 42-43: 穴
     t+=_flat(R,4)                                        # 44-47: 着地・安全地帯
-    # ドカン(地下サブステージ入口)
-    t.append(_c(R,A,A,A,A,A,A,A,PT,PB,A,G,G))           # 48
-    t.append(_c(R,A,A,A,A,A,A,A,PR,PD,A,G,G))           # 49
+    # ドカン(地下サブステージ入口): 地面の上に直接2タイル分立ち上げる
+    t.append(_c(R,A,A,A,A,A,A,A,A,PT,PB,G,G))           # 48: pipe top row8, pipe bot row9
+    t.append(_c(R,A,A,A,A,A,A,A,A,PR,PD,G,G))           # 49
     t+=_flat(R,5)                                        # 50-54: 広い休憩地帯
 
     # ===== Section C: ?ブロック回廊 + レンガ橋 (col 55-78) =====
@@ -136,7 +136,7 @@ def _build_s1():
         'name':'1-1 GREEN HILL','bgm':'overworld','width':128,'rows':R,
         'time_limit':100,'terrain':t,'water':False,'gravity_scale':1.0,
         'start_col':2,'start_row':R-4,'goal_col':118,'flag_col':117,
-        'pipe_col':38,'pipe_dest':'substage','pipe_return_col':64,
+        'pipe_col':48,'pipe_dest':'substage','pipe_return_col':64,
         'objects':[
             (4,6,'qblock_random'),(14,5,'qblock_random'),(24,6,'qblock_random'),
             (68,5,'qblock_random'),(70,6,'qblock_random'),(72,5,'qblock_random'),

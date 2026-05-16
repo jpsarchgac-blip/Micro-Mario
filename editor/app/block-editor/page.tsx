@@ -7,11 +7,13 @@ import { BUILTIN_BLOCKS } from "@/lib/tiles";
 import { BlockDef, BlockBehavior } from "@/lib/types";
 import { bytesToHex } from "@/lib/persist";
 
-const BEHAVIORS: BlockBehavior[] = ["solid", "platform", "lethal", "passable"];
+const BEHAVIORS: BlockBehavior[] = ["solid", "platform", "lethal", "bounce", "ice", "passable"];
 const BEHAVIOR_DESC: Record<BlockBehavior, string> = {
   solid: "4方向衝突 (床・壁・天井)",
   platform: "上から着地のみ (雲足場)",
   lethal: "接触で死亡 (トゲ・マグマ)",
+  bounce: "着地でバネジャンプ (vy=-5.2)",
+  ice: "氷上: しゃがみ減速無効",
   passable: "当たり判定なし (装飾)",
 };
 

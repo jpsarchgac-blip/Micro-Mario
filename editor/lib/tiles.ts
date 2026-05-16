@@ -55,9 +55,9 @@ export const BUILTIN_SPRITES: Record<number, number[]> = {
 
 export const BUILTIN_BLOCKS: BlockDef[] = [
   // ID 16-20 mirrors custom_stages.py BUILTIN_BLOCKS
-  { id: 16, name: "tile_ice",     behavior: "solid",    sprite: BUILTIN_SPRITES[16] },
+  { id: 16, name: "tile_ice",     behavior: "ice",      sprite: BUILTIN_SPRITES[16] },
   { id: 17, name: "tile_sand",    behavior: "solid",    sprite: BUILTIN_SPRITES[17] },
-  { id: 18, name: "tile_bounce",  behavior: "platform", sprite: BUILTIN_SPRITES[18] },
+  { id: 18, name: "tile_bounce",  behavior: "bounce",   sprite: BUILTIN_SPRITES[18] },
   { id: 19, name: "tile_thorn",   behavior: "lethal",   sprite: BUILTIN_SPRITES[19] },
   { id: 20, name: "tile_dark_gr", behavior: "solid",    sprite: BUILTIN_SPRITES[20] },
 ];
@@ -98,6 +98,9 @@ export function behaviorOf(
   if (tileId === 8) return "coin";
   if (tileId === 10) return "goal";
   if (tileId === 15) return "flag";
+  // Built-in custom blocks (16-20) need explicit handling
+  const builtin = BUILTIN_BLOCKS.find((b) => b.id === tileId);
+  if (builtin) return builtin.behavior;
   if (SOLID_BUILTIN.has(tileId)) return "solid";
   if (PLATFORM_BUILTIN.has(tileId)) return "platform";
   if (LETHAL_BUILTIN.has(tileId)) return "lethal";
