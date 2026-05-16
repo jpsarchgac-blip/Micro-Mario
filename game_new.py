@@ -301,7 +301,10 @@ class GameNew:
    s.audio.play_sfx('jump_big'if s.player.state!=pl.STATE_SMALL else'jump_small')
   if getattr(s.player,'_just_bounced',False):
    s.audio.play_sfx('bounce');s.fx.rainbow(15)
-  if getattr(s.player,'_fire_request',False):s.audio.play_sfx('fireball')
+  if getattr(s.player,'_fire_request',False):
+   s.audio.play_sfx('fireball')
+   s.fx.event_flash((40,18,0),5)  # オレンジLEDフラッシュ
+   s.fx.beat()                     # ビートブースト (一瞬全LED明るく)
   if s.player.head_hit_col>=0:s._hit_block(s.player.head_hit_col)
   s._coin_pick()
   # 落下死/致死タイル判定は player.update() 側で行う(full DYING_FR で一貫)
@@ -386,20 +389,43 @@ class GameNew:
   if s.slot_f==1:s._apply_pending_item()
   s.slot_f-=1
  def _apply_pending_item(s):
+  # マリオカート式: アイテムを取得した瞬間に自動適用 (拾いに行く必要なし)。
+  # 各アイテムに応じたSFX + LEDフラッシュ + 状態変更を一括で行う。
   if s._pending_item is None:return
   it,sx,sy=s._pending_item;s._pending_item=None
   if it==0:
-   if s.player.state==pl.STATE_SMALL:s.ents.append(et.Mushroom(sx,sy))
-   else:s.score+=C.SCORE_COIN;s.coins+=1
-   s.audio.play_sfx('powerup');s.fx.rainbow(20)
+   # キノコ: SMALL→BIG、そうでなければスコア加算
+   if s.player.state==pl.STATE_SMALL:
+    s.player.powerup_mushroom()
+    s.fx.event_flash((0,40,0),12)  # 緑フラッシュ
+    s.fx.rainbow(30)
+   else:
+    s.score+=C.SCORE_COIN;s.coins+=1
+    s.fx.event_flash((40,35,0),8)
+   s.audio.play_sfx('powerup')
   elif it==1:
-   s.ents.append(et.FireFlower(sx,sy));s.audio.play_sfx('powerup');s.fx.rainbow(20)
+   # ファイアフラワー: SMALL→BIG→FIRE 経由で確実にFIRE化
+   s.player.powerup_fire()
+   s.audio.play_sfx('powerup')
+   s.fx.event_flash((40,15,0),12)  # オレンジフラッシュ
+   s.fx.rainbow(35)
   elif it==2:
-   s.ents.append(et.OneUp(sx,sy));s.audio.play_sfx('1up')
+   # 1UP
+   s.lives=min(C.MAX_LIVES,s.lives+1)
+   s.audio.play_sfx('1up')
+   s.fx.event_flash((0,40,25),14)
   elif it==3:
-   s.score+=C.SCORE_COIN;s.coins+=1;s.audio.play_sfx('coin');s.fx.event_flash((40,35,0),6)
+   # ボーナスコイン
+   s.score+=C.SCORE_COIN;s.coins+=1
+   s.audio.play_sfx('coin')
+   s.fx.event_flash((40,35,0),8)
   else:
-   s.ents.append(en.StarItem(sx,sy));s.audio.play_sfx('powerup');s.fx.rainbow(30)
+   # スター: 無敵開始 + 専用BGM + 高速レインボー
+   s.star_t=C.STAR_DURATION
+   s.audio.play_sfx('powerup')
+   s.audio.play_bgm('star')   # ★ スター中はBGM切替で音による状態通知
+   s.fx.set_star(True)
+   s.fx.rainbow(60)
  def _coin_pick(s):
   px,py,pw,ph=s.player.aabb()
   l=int(px)//C.TILE;r=int(px+pw-1)//C.TILE

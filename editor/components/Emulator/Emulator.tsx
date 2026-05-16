@@ -14,7 +14,11 @@ import {
 import {
   TILE, createPlayer, stepPlayer, PlayerState, Input,
 } from "@/lib/physics";
-import { Enemy, buildEnemies, stepEnemies, resolveCollisions, collectCoins, eachVisibleEnemy } from "@/lib/enemies";
+import {
+  Enemy, buildEnemies, stepEnemies, resolveCollisions, collectCoins, eachVisibleEnemy,
+  Fireball, makeFireball, stepFireballs, resolveFireballs, rollQItem, QItemId,
+} from "@/lib/enemies";
+import { powerupMushroom, powerupFire } from "@/lib/physics";
 import { spriteFor } from "@/lib/enemy-sprites";
 import { blitSprite } from "./drawing";
 
@@ -51,6 +55,12 @@ interface EmuState {
   stage: Stage | null;
   player: PlayerState | null;
   enemies: Enemy[];
+  fireballs: Fireball[];
+  /** Star invincibility timer (frames, 30=1s) */
+  starT: number;
+  /** Item-acquired flash (frames). RGB hint based on item type. */
+  itemFlash: number;
+  itemFlashColor: string;
   lives: number;
   score: number;
   coins: number;
@@ -74,6 +84,10 @@ const initialState = (): EmuState => ({
   stage: null,
   player: null,
   enemies: [],
+  fireballs: [],
+  starT: 0,
+  itemFlash: 0,
+  itemFlashColor: "#facc15",
   lives: 3,
   score: 0,
   coins: 0,
@@ -257,9 +271,52 @@ export function Emulator() {
       stage: null,
       player: null,
       enemies: [],
+      fireballs: [],
+      starT: 0,
+      itemFlash: 0,
+      itemFlashColor: "#facc15",
       prevJump: false,
       quitHold: 0,
     });
+  }
+
+  /** Apply an item to player + emit feedback. Mirrors game_new._apply_pending_item. */
+  function applyItem(it: QItemId, s: EmuState) {
+    if (!s.player) return;
+    switch (it) {
+      case 0: // mushroom
+        if (s.player.state === "small") {
+          powerupMushroom(s.player);
+          s.itemFlash = 18; s.itemFlashColor = "#22c55e";
+        } else {
+          s.score += 100; s.coins += 1;
+          s.itemFlash = 10; s.itemFlashColor = "#fbbf24";
+        }
+        playBgm([["C5", 60], ["E5", 60], ["G5", 60], ["C6", 60], ["E6", 200]], { loop: false });
+        break;
+      case 1: // fire flower
+        powerupFire(s.player);
+        s.itemFlash = 18; s.itemFlashColor = "#fb923c";
+        playBgm([["C5", 60], ["E5", 60], ["G5", 60], ["C6", 60], ["E6", 60], ["G6", 250]], { loop: false });
+        break;
+      case 2: // 1-UP
+        s.lives = Math.min(9, s.lives + 1);
+        s.itemFlash = 20; s.itemFlashColor = "#34d399";
+        playBgm([["E5", 80], ["G5", 80], ["C6", 80], ["E6", 80], ["C6", 80], ["D6", 200]], { loop: false });
+        break;
+      case 3: // bonus coin
+        s.score += 100; s.coins += 1;
+        s.itemFlash = 8; s.itemFlashColor = "#fde047";
+        beepNote("E5", 80);
+        break;
+      case 4: // star
+        s.starT = 300; // 10 sec @ 30 fps
+        s.itemFlash = 30; s.itemFlashColor = "#f472b6";
+        // Switch BGM to star track immediately
+        const starTrack = getBgmTrack("star", projectRef.current.bgm);
+        if (starTrack) playBgm(starTrack, { loop: true });
+        break;
+    }
   }
 
   // =====================================================================
@@ -304,7 +361,7 @@ export function Emulator() {
             const stage: Stage = { ...orig, terrain: orig.terrain.map((c) => [...c]) };
             const player = createPlayer(stage);
             const enemies = buildEnemies(stage, s.diffKey);
-            stRef.current = { ...s, stage, player, enemies, tl: stage.time_limit, tsf: 0 };
+            stRef.current = { ...s, stage, player, enemies, fireballs: [], starT: 0, tl: stage.time_limit, tsf: 0, itemFlash: 0 };
             // BGM
             const tr = getBgmTrack(stage.bgm, projectRef.current.bgm);
             if (tr) playBgm(tr, { loop: true });
@@ -334,6 +391,37 @@ export function Emulator() {
           }
           const res = stepPlayer(s.stage, projectRef.current.blocks, s.player, inp);
 
+          // Q-block / Brick head bump
+          if (res.headHit) {
+            const { col: hc, row: hr, tileId } = res.headHit;
+            if (tileId === 3) {
+              // QBLOCK → QUSED, roll item, apply
+              s.stage.terrain[hc][hr] = 12;
+              s.score += 50;
+              beepNote("B4", 60);
+              const item = rollQItem();
+              applyItem(item, s);
+            } else if (tileId === 2) {
+              // BRICK: break if not SMALL
+              if (s.player.state !== "small") {
+                s.stage.terrain[hc][hr] = 0;
+                s.score += 50;
+                beepNote("F3", 80);
+              } else {
+                beepNote("F3", 40);
+              }
+            }
+          }
+
+          // Fireball: SW2 press while FIRE → spawn
+          if (res.firePressed && s.fireballs.filter((f) => f.alive).length < 2) {
+            const dir: 1 | -1 = 1;
+            s.fireballs.push(makeFireball(s.player.x + 8, s.player.y + 4, dir));
+            beepNote("A5", 60);
+            beepNote("E5", 40);
+            s.itemFlash = 4; s.itemFlashColor = "#fb923c";
+          }
+
           // Coin pickup (tile-based)
           const collected = collectCoins(s.stage, projectRef.current.blocks, s.player);
           if (collected > 0) {
@@ -344,17 +432,40 @@ export function Emulator() {
 
           // Enemy AI + collision
           stepEnemies(s.stage, projectRef.current.blocks, s.enemies);
-          const col = resolveCollisions(s.player, s.enemies);
+          const starActive = s.starT > 0;
+          const col = resolveCollisions(s.player, s.enemies, starActive);
           if (col.stomped > 0) {
             s.score += 200 * col.stomped;
             beepNote("G5", 50);
           }
           if (col.bounced) beepNote("C6", 80);
           if (col.damaged) beepNote("A3", 200);
+
+          // Fireballs update + hit enemies
+          stepFireballs(s.stage, projectRef.current.blocks, s.fireballs);
+          const fbKilled = resolveFireballs(s.fireballs, s.enemies);
+          if (fbKilled > 0) {
+            s.score += 400 * fbKilled;
+            beepNote("G5", 60);
+          }
+          s.fireballs = s.fireballs.filter((f) => f.alive);
+
           // Clean dead enemies
           if (s.enemies.length > 0 && s.enemies.some((e) => !e.alive)) {
             s.enemies = s.enemies.filter((e) => e.alive);
           }
+
+          // Star timer
+          if (s.starT > 0) {
+            s.starT--;
+            if (s.starT === 0) {
+              // Restore stage BGM
+              const tr = getBgmTrack(s.stage.bgm, projectRef.current.bgm);
+              if (tr) playBgm(tr, { loop: true });
+            }
+          }
+          // Item flash decay
+          if (s.itemFlash > 0) s.itemFlash--;
 
           // Time tick
           s.tsf++;
@@ -596,6 +707,21 @@ function drawPlaying(
     }
   }
 
+  // Fireballs (player-fired projectiles)
+  for (const f of s.fireballs) {
+    if (!f.alive) continue;
+    const fx = (f.x - camX) * SCALE;
+    const fy = (f.y - camY) * SCALE;
+    ctx.fillStyle = FG;
+    // Flickering 4x4 pixel ball with rotating cross pattern
+    if ((f.anim >> 1) & 1) {
+      ctx.fillRect(fx, fy, 4 * SCALE, 4 * SCALE);
+    } else {
+      ctx.fillRect(fx + SCALE, fy, 2 * SCALE, 4 * SCALE);
+      ctx.fillRect(fx, fy + SCALE, 4 * SCALE, 2 * SCALE);
+    }
+  }
+
   // Live enemies (AI-driven)
   eachVisibleEnemy(s.enemies, (e) => {
     const sx = e.x - camX;
@@ -613,13 +739,46 @@ function drawPlaying(
     blitSprite(ctx, spr, Math.floor(sx), Math.floor(sy), SCALE);
   });
 
-  // Player (invincible: blink every other frame)
+  // Player (invincible: blink every other frame; star: rainbow tint)
   const blink = player.invincible > 0 && ((player.invincible & 2) === 0);
   if (!blink) {
     const px = (player.x - camX) * SCALE;
     const py = (player.y - camY) * SCALE;
-    ctx.fillStyle = FG;
+    if (s.starT > 0) {
+      const colors = ["#fef9c3", "#fb923c", "#22c55e", "#3b82f6", "#a855f7", "#ef4444"];
+      ctx.fillStyle = colors[s.starT % colors.length];
+    } else if (player.state === "fire") {
+      ctx.fillStyle = "#fb923c"; // orange tint for Fire Mario
+    } else if (player.state === "big") {
+      ctx.fillStyle = FG;
+    } else {
+      ctx.fillStyle = FG;
+    }
     ctx.fillRect(px, py, player.w * SCALE, player.h * SCALE);
+    // Fire-state shoulder indicator
+    if (player.state === "fire") {
+      ctx.fillStyle = "#fef9c3";
+      ctx.fillRect(px + 2 * SCALE, py, 2 * SCALE, SCALE);
+    }
+  }
+
+  // Star aura: thin flickering border around player
+  if (s.starT > 0 && (s.starT & 1) === 0) {
+    const px = (player.x - camX) * SCALE;
+    const py = (player.y - camY) * SCALE;
+    ctx.fillStyle = "#fde047";
+    ctx.fillRect(px - SCALE, py, SCALE, player.h * SCALE);
+    ctx.fillRect(px + player.w * SCALE, py, SCALE, player.h * SCALE);
+    ctx.fillRect(px, py - SCALE, player.w * SCALE, SCALE);
+    ctx.fillRect(px, py + player.h * SCALE, player.w * SCALE, SCALE);
+  }
+
+  // Item-acquired full-screen flash (frames decrement after use)
+  if (s.itemFlash > 0 && (s.itemFlash & 1) === 1) {
+    ctx.fillStyle = s.itemFlashColor;
+    ctx.globalAlpha = 0.25;
+    ctx.fillRect(0, 0, SCREEN_W * SCALE, SCREEN_H * SCALE);
+    ctx.globalAlpha = 1.0;
   }
 
   // HUD: clear top 8 rows + redraw text

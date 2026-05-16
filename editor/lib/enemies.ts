@@ -299,7 +299,8 @@ export function resolveCollisions(
     state: "small" | "big" | "fire" | "dead";
     invincible: number; crouching: boolean; onGround: boolean;
   },
-  enemies: Enemy[]
+  enemies: Enemy[],
+  starMode = false
 ): CollisionResult {
   const result: CollisionResult = { stomped: 0, damaged: false, bounced: false, killed: false };
   if (player.state === "dead") return result;
@@ -322,6 +323,13 @@ export function resolveCollisions(
 
     if (e.harmless || e.squashedT > 0 || e.falling) return;
     if (e.type === "killer_spawn") return; // spawner itself doesn't hit
+
+    // Star mode: any contact kills enemy, no damage to player
+    if (starMode && e.type !== "boss") {
+      e.alive = false;
+      result.stomped++;
+      return;
+    }
 
     // Stomp detection (player coming down + previous bottom <= enemy top + tolerance)
     const prevBottom = py + ph - player.vy;
@@ -408,4 +416,82 @@ export function eachVisibleEnemy(enemies: Enemy[], fn: (e: Enemy) => void) {
       fn(e);
     }
   }
+}
+
+// =====================================================================
+// Fireballs (player-fired projectiles)
+// =====================================================================
+export interface Fireball {
+  x: number; y: number;
+  vx: number; vy: number;
+  w: number; h: number;
+  alive: boolean;
+  anim: number;
+}
+
+export function makeFireball(x: number, y: number, dir: 1 | -1): Fireball {
+  return { x, y, vx: 3 * dir, vy: 0, w: 4, h: 4, alive: true, anim: 0 };
+}
+
+export function stepFireballs(stage: Stage, blocks: BlockDef[], fbs: Fireball[]) {
+  for (const f of fbs) {
+    if (!f.alive) continue;
+    f.anim++;
+    f.vy = Math.min(f.vy + 0.35, 4.5);
+    // X
+    const nx = collideX(stage, blocks, f.x, f.y, f.w, f.h, f.vx);
+    if (Math.abs(nx - (f.x + f.vx)) > 0.01) { f.alive = false; continue; }
+    f.x = nx;
+    // Y
+    const cy = collideY(stage, blocks, f.x, f.y, f.w, f.h, f.vy);
+    f.y = cy.newY;
+    if (cy.onGround) f.vy = -3.0; // ground bounce
+    if (f.y > stage.rows * 8 + 16 || f.x < -8 || f.x > stage.width * 8 + 8) f.alive = false;
+  }
+}
+
+/** Resolve fireball vs enemy hits. Returns number of enemies killed. */
+export function resolveFireballs(fbs: Fireball[], enemies: Enemy[]): number {
+  let killed = 0;
+  for (const f of fbs) {
+    if (!f.alive) continue;
+    const fx2 = f.x, fy2 = f.y, fw = f.w, fh = f.h;
+    const processOne = (e: Enemy) => {
+      if (!e.alive || e.harmless || e.type === "killer_spawn" || e.type === "big_mushroom") return;
+      const ex = e.x, ey = e.y, ew = e.w, eh = e.h;
+      if (fx2 < ex + ew && fx2 + fw > ex && fy2 < ey + eh && fy2 + fh > ey) {
+        if (e.type === "boss") {
+          if ((e.hp ?? 1) > 1) e.hp = (e.hp ?? 1) - 1;
+          else e.alive = false;
+        } else {
+          e.alive = false;
+        }
+        f.alive = false;
+        killed++;
+      }
+    };
+    for (const e of enemies) {
+      if (e.type === "killer_spawn") {
+        for (const k of e.spawned ?? []) processOne(k);
+      } else processOne(e);
+      if (!f.alive) break;
+    }
+  }
+  return killed;
+}
+
+// =====================================================================
+// Q-block item rolling (mirrors config.QBLOCK_PROBS)
+// =====================================================================
+/** Item ID returned from a Q-block hit: 0=mushroom 1=fire 2=1up 3=coin 4=star */
+export type QItemId = 0 | 1 | 2 | 3 | 4;
+
+const QBLOCK_PROBS = [50, 65, 80, 90, 100];
+
+export function rollQItem(): QItemId {
+  const r = Math.floor(Math.random() * 100);
+  for (let i = 0; i < QBLOCK_PROBS.length; i++) {
+    if (r < QBLOCK_PROBS[i]) return i as QItemId;
+  }
+  return 4;
 }

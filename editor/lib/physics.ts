@@ -109,9 +109,11 @@ function collideY(
   stage: Stage,
   blocks: import("./types").BlockDef[],
   px: number, py: number, w: number, h: number, dy: number
-): { newY: number; onGround: boolean } {
+): { newY: number; onGround: boolean; headHitCol: number; headHitRow: number } {
   let ny = py + dy;
   let onGround = false;
+  let headHitCol = -1;
+  let headHitRow = -1;
   if (dy === 0) {
     const footRow = Math.floor((py + h) / TILE);
     const left = Math.floor(px / TILE);
@@ -122,7 +124,7 @@ function collideY(
         onGround = true; break;
       }
     }
-    return { newY: ny, onGround };
+    return { newY: ny, onGround, headHitCol, headHitRow };
   }
   const front = dy > 0 ? Math.floor((ny + h - 1) / TILE) : Math.floor(ny / TILE);
   const left = Math.floor(px / TILE);
@@ -134,19 +136,21 @@ function collideY(
         onGround = true;
       } else {
         ny = (front + 1) * TILE;
+        headHitCol = c;
+        headHitRow = front;
       }
-      return { newY: ny, onGround };
+      return { newY: ny, onGround, headHitCol, headHitRow };
     }
     if (dy > 0 && isPlatform(stage, c, front, blocks)) {
       const topEdge = front * TILE;
       if (py + h <= topEdge + 1) {
         ny = topEdge - h;
         onGround = true;
-        return { newY: ny, onGround };
+        return { newY: ny, onGround, headHitCol, headHitRow };
       }
     }
   }
-  return { newY: ny, onGround };
+  return { newY: ny, onGround, headHitCol, headHitRow };
 }
 
 /** Advance physics by one frame. Returns updated PlayerState (mutated in place). */
@@ -155,7 +159,7 @@ export function stepPlayer(
   blocks: import("./types").BlockDef[],
   p: PlayerState,
   inp: Input
-): { died?: "fall" | "lethal" | "time"; clearedGoal?: boolean } {
+): { died?: "fall" | "lethal" | "time"; clearedGoal?: boolean; headHit?: { col: number; row: number; tileId: number }; firePressed?: boolean } {
   if (p.state === "dead") {
     p.y += p.vy;
     p.vy += 0.3;
@@ -220,8 +224,15 @@ export function stepPlayer(
   // Collide
   p.x = collideX(stage, blocks, p.x, p.y, p.w, p.h, p.vx);
   const cy = collideY(stage, blocks, p.x, p.y, p.w, p.h, p.vy);
+  // 上方向衝突 (頭ヒット) で速度ゼロ
+  if (p.vy < 0 && cy.headHitCol >= 0) p.vy = 0;
   p.y = cy.newY;
   if (cy.onGround) { p.vy = 0; p.onGround = true; } else p.onGround = false;
+  // Head-hit info (used by caller for Q-block etc.)
+  let headHit: { col: number; row: number; tileId: number } | undefined;
+  if (cy.headHitCol >= 0) {
+    headHit = { col: cy.headHitCol, row: cy.headHitRow, tileId: tileAt(stage, cy.headHitCol, cy.headHitRow) };
+  }
 
   // Special tile feedback (BOUNCE / ICE) - check feet row
   if (p.onGround) {
@@ -261,11 +272,59 @@ export function stepPlayer(
     return { died: "fall" };
   }
 
+  // Fire request (SW2 press edge while FIRE state).
+  // SW2 is also crouch on hold, so we fire on press edge only.
+  // The caller decides what to do with firePressed (spawn fireball entity).
+  let firePressed = false;
+  // Use a transient field on player to track previous duck state
+  const pAny = p as PlayerState & { _prevDuck?: boolean };
+  if (inp.duckHeld && !pAny._prevDuck && p.state === "fire") firePressed = true;
+  pAny._prevDuck = inp.duckHeld;
+
   // Goal
   if (stage.goal_col > 0 && p.x >= stage.goal_col * TILE - 4) {
-    return { clearedGoal: true };
+    return { clearedGoal: true, headHit, firePressed };
   }
-  return {};
+  return { headHit, firePressed };
+}
+
+/** Apply a power-up effect to the player. Mirrors player.py powerup_*(). */
+export function powerupMushroom(p: PlayerState) {
+  if (p.state === "small") {
+    p.state = "big";
+    p.y -= 8;
+    p.h = 16;
+  }
+}
+
+export function powerupFire(p: PlayerState) {
+  if (p.state === "small") {
+    p.state = "big";
+    p.y -= 8;
+    p.h = 16;
+  }
+  p.state = "fire";
+}
+
+/** Take damage. Returns true if player died (was SMALL or already dying). */
+export function takeDamage(p: PlayerState): boolean {
+  if (p.invincible > 0 || p.state === "dead") return false;
+  if (p.state === "fire" || p.state === "big") {
+    p.state = "small";
+    if (p.crouching) {
+      p.crouching = false;
+      p.h = 8;
+    } else {
+      p.y += 8;
+      p.h = 8;
+    }
+    p.invincible = 90;
+    return false;
+  }
+  p.state = "dead";
+  p.vy = -3.5;
+  p.vx = 0;
+  return true;
 }
 
 /** Approximate jump reach overlay: returns set of "col,row" cells reachable in one jump from start tile. */
