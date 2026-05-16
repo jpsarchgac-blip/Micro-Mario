@@ -140,9 +140,12 @@ def draw_flag_anim(oled,bank,world,cam_x,cam_y,flag_col,frame):
 
 def draw_stage_intro_new(oled,bank,stage_num,lives,diff_name):
     oled.fill(0)
-    oled.rect(10,10,108,44,1)
-    rd.draw_text(oled,bank,'STAGE',_cx('STAGE'),16)
-    rd.draw_number(oled,bank,stage_num,60,26,width=1)
-    rd.draw_text(oled,bank,'LIFE',28,38)
-    rd.draw_hearts(oled,bank,lives,54,38)
-    rd.draw_text(oled,bank,diff_name,_cx(diff_name),48)
+    oled.rect(6,4,116,40,1)
+    rd.draw_text(oled,bank,'STAGE',_cx('STAGE'),8)
+    rd.draw_number(oled,bank,stage_num,60,18,width=1)
+    rd.draw_text(oled,bank,'LIFE',24,30)
+    rd.draw_hearts(oled,bank,lives,50,30)
+    rd.draw_text(oled,bank,diff_name,_cx(diff_name),38)
+    # 操作ヒント (画面下部)
+    rd.draw_text(oled,bank,'1:JUMP 2:DUCK 3:DASH',_cx('1:JUMP 2:DUCK 3:DASH'),50)
+    rd.draw_text(oled,bank,'HOLD 1+2+3=TITLE',_cx('HOLD 1+2+3=TITLE'),57)

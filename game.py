@@ -351,7 +351,7 @@ class Game:
             if (px < ex + ew and px + pw > ex and
                 py < ey + eh and py + ph > ey):
                 # 踏みつけ判定: プレイヤーが下方向で、かつ足元が敵の上側
-                stomp = (self.player.vy > 0 and py + ph - self.player.vy <= ey + 3)
+                stomp = (self.player.vy > 0 and py + ph - self.player.vy <= ey + 5)
                 if stomp:
                     if e.on_stomp():
                         # 踏み成功

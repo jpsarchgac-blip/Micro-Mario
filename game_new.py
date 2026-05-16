@@ -332,7 +332,7 @@ class GameNew:
      if not k.alive:continue
      kx,ky,kw,kh=k.aabb()
      if px<kx+kw and px+pw>kx and py<ky+kh and py+ph>ky:
-      if s.player.vy>0 and py+ph-s.player.vy<=ky+3:
+      if s.player.vy>0 and py+ph-s.player.vy<=ky+5:
        k.on_stomp();s.player.vy=-2.6;s.audio.play_sfx('stomp');s.score+=C.SCORE_STOMP
       elif s.star_t>0:k.alive=False;s.score+=C.SCORE_STOMP
       else:s._dmg()
@@ -363,7 +363,7 @@ class GameNew:
    if not e.solid_for_player:continue
    ex,ey,ew,eh=e.aabb()
    if not(px<ex+ew and px+pw>ex and py<ey+eh and py+ph>ey):continue
-   stomp=s.player.vy>0 and py+ph-s.player.vy<=ey+3
+   stomp=s.player.vy>0 and py+ph-s.player.vy<=ey+5
    if s.star_t>0:e.alive=False;s.score+=C.SCORE_STOMP;s.audio.play_sfx('stomp');continue
    if stomp:
     if e.on_stomp():s.player.vy=-2.6;s.audio.play_sfx('stomp');s.score+=C.SCORE_STOMP
