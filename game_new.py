@@ -151,7 +151,7 @@ class GameNew:
     # カスタムモード: 利用可能なカスタムステージを読み込み、選択画面へ
     try:
      import custom_stages as cust
-     s.custom_stages=cust.load_custom_stages()
+     s.custom_stages=cust.load_custom_stages(s.bank)
     except Exception as e:
      print('custom load error:',e);s.custom_stages=[]
     s.custom_idx=0;s._cs(S_CUSTOM_SEL)

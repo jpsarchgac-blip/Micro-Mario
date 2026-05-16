@@ -179,8 +179,9 @@ class WorldNew:
                 if tid == MAGMA:
                     # 波打ちアニメ
                     key = 'magma_2' if ((frame >> 3) + col) & 1 else 'magma_1'
-                    blit(fb[key], sx, sy)
+                    if key in fb:
+                        blit(fb[key], sx, sy)
                 else:
                     name = _TILE_NAME.get(tid)
-                    if name is not None:
+                    if name is not None and name in fb:
                         blit(fb[name], sx, sy)
