@@ -477,6 +477,11 @@ def _build_s5():
             else:         t.append(_c(R,A,A,A,A,A,A,A,A,A,A,G,G))
         elif i<100:
             t.append(_c(R,A,A,A,A,A,A,A,A,A,A,G,G))
+        elif i==100: t.append(_c(R,A,A,A,A,A,A,A,A,A,G,G,G))      # 階段row9
+        elif i==101: t.append(_c(R,A,A,A,A,A,A,A,A,G,G,G,G))      # row8
+        elif i==102: t.append(_c(R,A,A,A,A,A,A,A,G,G,G,G,G))      # row7
+        elif i==103: t.append(_c(R,A,A,A,A,A,A,G,G,G,G,G,G))      # row6 最高
+        elif i==104: t.append(_c(R,A,A,A,A,A,A,A,A,A,A,G,G))      # 降下口
         elif i==105:
             t.append(_c(R,A,A,A,A,FL,FL,FL,FL,FL,FL,G,G))
         else:
@@ -510,16 +515,47 @@ def _build_s5():
 
 
 def _build_s6():
+    # 城内ボス戦アリーナ。32x8 → 48x8 に拡張、足場・トゲ・天井障害を追加
     R=8;t=[]
-    t.append(_c(R,G,G,G,G,G,G,G,G))
-    for _ in range(30):
-        t.append(_c(R,A,A,A,A,A,A,G,G))
-    t.append(_c(R,G,G,G,G,G,G,G,G))
+    # 入口
+    t.append(_c(R,G,G,G,G,G,G,G,G))          # 0: 左壁
+    for _ in range(3): t.append(_c(R,A,A,A,A,A,A,G,G))   # 1-3: 平地
+    # 入口の天井ブリック(マグマ地帯の演出)
+    t.append(_c(R,B,A,A,A,A,A,G,G))          # 4: 天井レンガ
+    t.append(_c(R,B,A,A,A,Q,A,G,G))          # 5: ?ブロック中段
+    t.append(_c(R,B,A,A,A,A,A,G,G))          # 6
+    t.append(_c(R,A,A,A,A,A,A,G,G))          # 7
+    # マグマ地帯1: 下部マグマ + 浮島
+    for i in range(8,12):
+        if i==9 or i==10:
+            t.append(_c(R,A,A,A,A,A,G,MA,MA))    # 浮島row5・下マグマ
+        else:
+            t.append(_c(R,A,A,A,A,A,A,MA,MA))    # マグマ単独
+    # 中央広場 (col 12-22): 主戦場
+    for i in range(12,23):
+        if i==17:
+            t.append(_c(R,A,A,B,A,A,A,G,G))     # 中央天井レンガ row2
+        else:
+            t.append(_c(R,A,A,A,A,A,A,G,G))
+    # マグマ地帯2: 上下からの圧力
+    for i in range(23,28):
+        if i==24 or i==26:
+            t.append(_c(R,B,A,A,A,A,A,MA,MA))   # 天井レンガ + マグマ床
+        else:
+            t.append(_c(R,A,A,A,A,A,A,MA,MA))
+    # 最終足場
+    for _ in range(3): t.append(_c(R,A,A,A,A,A,A,G,G))   # 28-30
+    # ボス本陣
+    for _ in range(15): t.append(_c(R,A,A,A,A,A,A,G,G))  # 31-45
+    t.append(_c(R,G,G,G,G,G,G,G,G))          # 46: 右壁
+    t.append(_c(R,G,G,G,G,G,G,G,G))          # 47
+    while len(t)<48: t.append(_c(R,G,G,G,G,G,G,G,G))
+    t=t[:48]
     return{
-        'name':'BOSS - KING KOOPA','bgm':'boss','width':32,'rows':R,
-        'time_limit':200,'terrain':t,'water':False,'gravity_scale':1.0,
-        'start_col':2,'start_row':R-4,'goal_col':-1,
-        'objects':[(24,4,'boss')],
+        'name':'BOSS - KING KOOPA','bgm':'boss','width':48,'rows':R,
+        'time_limit':250,'terrain':t,'water':False,'gravity_scale':1.0,
+        'start_col':2,'start_row':R-3,'goal_col':-1,
+        'objects':[(5,4,'qblock_random'),(40,4,'boss')],
         'enemy_sets':{},
     }
 

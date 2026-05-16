@@ -211,9 +211,9 @@ class GameNew:
     s._quit_hold=0;s.audio.stop_bgm();s._cs(S_TITLE);return
   else:
    s._quit_hold=0
-  crouch=s.inp.held(2)
+  # SW2 hold = しゃがみ/水中ダイブ。SW3 hold = ダッシュ(player.py側で処理)
+  crouch=s.inp.held(1)
   if crouch and s.player.is_water:s.player.vy+=0.3
-  if crouch:s.player.vx*=C.CROUCH_SPEED_MUL
   if s.test_mode:
    s.inp.update_auto(s.player,s.world,s.ents)
    s._test_t+=1
@@ -224,12 +224,7 @@ class GameNew:
   if getattr(s.player,'_fire_request',False):s.audio.play_sfx('fireball')
   if s.player.head_hit_col>=0:s._hit_block(s.player.head_hit_col)
   s._coin_pick()
-  # fall-off-bottom death
-  if s.player.y > s.world.map_h_px + 8:
-   s.player.kill_by_fall();s._cs(S_DIE);s.audio.stop_bgm();s.audio.play_sfx('damage');return
-  # lethal tile check
-  if s.world.touches_lethal(s.player.x,s.player.y,s.player.w,s.player.h):
-   s.player.kill_by_fall();s._cs(S_DIE);s.audio.stop_bgm();s.audio.play_sfx('damage');return
+  # 落下死/致死タイル判定は player.update() 側で行う(full DYING_FR で一貫)
   # pipe check
   sd=sn.get_stage_new(s.sn)
   pc=sd.get('pipe_col',-1)
@@ -425,7 +420,11 @@ class GameNew:
   if near_exit and s.inp.pressed(0):
    s.audio.play_sfx('pipe');s._cs(S_PIPE_OUT)
   if s.inp.held(0)and s.inp.held(1)and s.inp.held(2):
-   s.audio.stop_bgm();s.world=s.main_world if s.main_world else s.world;s._cs(S_TITLE);return
+   s._quit_hold+=1
+   if s._quit_hold>=C.TARGET_FPS*3:
+    s._quit_hold=0;s.audio.stop_bgm();s.world=s.main_world if s.main_world else s.world;s._cs(S_TITLE);return
+  else:
+   s._quit_hold=0
   if s.player.y>s.world.map_h_px+8:s.player.kill_by_fall()
   if s.player.state==pl.STATE_DEAD:s._cs(S_DIE);s.audio.play_sfx('damage')
  def _u_pipeout(s):

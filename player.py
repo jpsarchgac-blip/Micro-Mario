@@ -86,9 +86,16 @@ class Player:
         if self.invincible > 0 or self.powerup_anim > 0:
             return False
         if self.state == STATE_FIRE or self.state == STATE_BIG:
-            self.state = STATE_SMALL
-            self.y += 8  # 縮んだ分下げる
-            self._sync_size()
+            # しゃがみ状態のままBIG→SMALLに縮むと位置がズレるので先に立ち上げ判定をスキップしてリセット
+            if self.crouching:
+                self.crouching = False
+                # しゃがみ中はh=8でy+=8されている → 立ち姿(SMALL)もh=8でy維持で同位置
+                self.state = STATE_SMALL
+                self._sync_size()
+            else:
+                self.state = STATE_SMALL
+                self.y += 8  # 縮んだ分下げる
+                self._sync_size()
             self.invincible = C.INVINCIBLE_FR
             return False
         # SMALLで被弾 → 死亡
@@ -129,30 +136,48 @@ class Player:
             self.invincible -= 1
 
         # ---- 水平入力 ----
-        # 今回は左右ボタンがないので、自動右移動(あるいは速度可変)
-        # 設計: SW3=ダッシュで速度UP、押さなければ通常歩行
+        # SW3 = ダッシュ(常時), SW2 hold = しゃがみ(地上+BIG/FIRE限定)。
+        # 旧仕様: BIG/FIREでSW3を押すとしゃがみ ⇒ ダッシュが使えない不満があったため分離。
         run = inp.held(2)
-        # しゃがみ判定: 地上 + SW3 held + BIG/FIRE のみ
-        if self.on_ground and run and self.state in (STATE_BIG, STATE_FIRE):
+        duck = inp.held(1)
+
+        # ダッシュチャージは状態に関わらず常に蓄積/減衰させる
+        if run:
+            if self.run_charge < C.RUN_ACCEL_FR:
+                self.run_charge += 1
+        else:
+            if self.run_charge > 0:
+                self.run_charge -= 1
+        t = self.run_charge / C.RUN_ACCEL_FR
+        base_vx = C.WALK_SPEED + (C.RUN_SPEED - C.WALK_SPEED) * t
+
+        want_crouch = duck and self.on_ground and self.state in (STATE_BIG, STATE_FIRE)
+        if want_crouch:
             if not self.crouching:
                 self.crouching = True
                 self.h = 8
                 self.y += 8  # 縮んだ分だけ下げて地面に接地を維持
-            self.run_charge = 0
             target_vx = C.CROUCH_WALK_SPEED
         else:
             if self.crouching:
-                self.crouching = False
-                self.h = 16
-                self.y -= 8  # 元の高さに戻す
-            if run:
-                if self.run_charge < C.RUN_ACCEL_FR:
-                    self.run_charge += 1
+                # 立ち上がる前に頭上スペースを確認(低天井下では強制継続)
+                head_row = int(self.y - 8) // C.TILE
+                left  = int(self.x) // C.TILE
+                right = int(self.x + self.w - 1) // C.TILE
+                blocked = False
+                for c in range(left, right + 1):
+                    if self.world.is_solid(c, head_row):
+                        blocked = True
+                        break
+                if not blocked:
+                    self.crouching = False
+                    self.h = 16
+                    self.y -= 8
+                    target_vx = base_vx
+                else:
+                    target_vx = C.CROUCH_WALK_SPEED
             else:
-                if self.run_charge > 0:
-                    self.run_charge -= 1
-            t = self.run_charge / C.RUN_ACCEL_FR
-            target_vx = C.WALK_SPEED + (C.RUN_SPEED - C.WALK_SPEED) * t
+                target_vx = base_vx
         self.vx = target_vx
         self.facing = 1
 
