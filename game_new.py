@@ -12,7 +12,7 @@ from auto_input import AutoInput
 S_TITLE='t';S_MODE='m';S_DIFF='d';S_INTRO='i';S_PAN='pan'
 S_PLAY='p';S_DIE='die';S_PAUSE='pau';S_CLEAR='cl'
 S_OVER='ov';S_END='end';S_PIPE_IN='pi';S_PIPE_P='pp';S_PIPE_OUT='po'
-S_MUSIC='mus';S_OPTION='opt';S_FLAG='fl'
+S_MUSIC='mus';S_OPTION='opt';S_FLAG='fl';S_CUSTOM_SEL='cs'
 
 class GameNew:
  def __init__(s,oled,bank,inp,audio,fx):
@@ -35,6 +35,10 @@ class GameNew:
   import music
   s.music_list=list(music.BGM.keys())
   s.music_playing=False
+  # カスタムモード状態
+  s.custom_mode=False
+  s.custom_stages=[]
+  s.custom_idx=0
  def _cs(s,ns):s.st=ns;s.st_t=0
  def update(s):
   s.inp.update();s.frame+=1;st=s.st
@@ -59,6 +63,7 @@ class GameNew:
   elif st==S_MUSIC:s._u_music()
   elif st==S_OPTION:s._u_option()
   elif st==S_FLAG:s._u_flag()
+  elif st==S_CUSTOM_SEL:s._u_custom_sel()
   s.audio.update()
   if s.audio.beat_pulse:s.fx.beat()
   s.fx.update(s.frame)
@@ -78,9 +83,21 @@ class GameNew:
   elif st==S_OPTION:ui.draw_option_menu(o,s.bank,s.vol_step)
   elif st==S_END:s._d_end()
   elif st==S_FLAG:s._d_flag()
+  elif st==S_CUSTOM_SEL:
+   if s.custom_stages:
+    ui.draw_custom_select(o,s.bank,s.custom_stages,s.custom_idx,s.frame)
+   else:
+    ui.draw_custom_empty(o,s.bank)
   o.show()
+ def _gst(s,num=None):
+  """現在のモード(NEW or CUSTOM)に応じてステージdictを返す。"""
+  if num is None:num=s.sn
+  if s.custom_mode:
+   if 1<=num<=len(s.custom_stages):return s.custom_stages[num-1]
+   return None
+  return sn.get_stage_new(num)
  def _start(s,num):
-  sd=sn.get_stage_new(num)
+  sd=s._gst(num)
   if sd is None:s._cs(S_END);return
   s.sn=num;s.world=wn.WorldNew(sd)
   sr=sd.get('start_row',s.world.rows-3)
@@ -112,7 +129,7 @@ class GameNew:
   s.fbs=[];s.cam_x=0;s.cam_y=0;s._test_t=0
   s.tl=sd.get('time_limit',100);s.tsf=0
   s.coins_max+=s.world.count_coins()
-  if num==6 and s.player.state!=pl.STATE_FIRE:
+  if not s.custom_mode and num==6 and s.player.state!=pl.STATE_FIRE:
    s.player.state=pl.STATE_FIRE;s.player._sync_size()
   s.fx.set_stage(num);s.fx.set_player_state(s.player.state)
   s.audio.play_bgm(sd['bgm']);gc.collect()
@@ -122,26 +139,54 @@ class GameNew:
   if s.st_t>=60:s._cs(S_MODE)
  def _u_mode(s):
   s.st_t+=1
-  if s.inp.pressed(1):s.mode_cur=(s.mode_cur-1)%5
-  if s.inp.pressed(2):s.mode_cur=(s.mode_cur+1)%5
+  if s.inp.pressed(1):s.mode_cur=(s.mode_cur-1)%6
+  if s.inp.pressed(2):s.mode_cur=(s.mode_cur+1)%6
   if s.inp.pressed(0):
    s.audio.play_sfx('select')
    if s.mode_cur==0:
     s.audio.stop_bgm();return 'OLD'
    elif s.mode_cur==1:
-    s._cs(S_DIFF)
+    s.custom_mode=False;s._cs(S_DIFF)
    elif s.mode_cur==2:
-    s.audio.stop_bgm();s.music_cur=0;s.music_playing=False;s._cs(S_MUSIC)
+    # カスタムモード: 利用可能なカスタムステージを読み込み、選択画面へ
+    try:
+     import custom_stages as cust
+     s.custom_stages=cust.load_custom_stages()
+    except Exception as e:
+     print('custom load error:',e);s.custom_stages=[]
+    s.custom_idx=0;s._cs(S_CUSTOM_SEL)
    elif s.mode_cur==3:
-    s._cs(S_OPTION)
+    s.audio.stop_bgm();s.music_cur=0;s.music_playing=False;s._cs(S_MUSIC)
    elif s.mode_cur==4:
+    s._cs(S_OPTION)
+   elif s.mode_cur==5:
     # テストモード: AutoInputに差し替えて全ステージ自動走破
-    s.test_mode=True;s.inp=AutoInput()
+    s.test_mode=True;s.inp=AutoInput();s.custom_mode=False
     s.diff=C.DIFF_NORMAL
     s.lives=s.diff['lives'];s.score=0;s.sn=1;s.deaths=0;s.coins=0;s.coins_max=0
     s.fx.set_difficulty(s.diff['name'])
     s.audio.stop_bgm();s._cs(S_INTRO)
   return None
+
+ def _u_custom_sel(s):
+  s.st_t+=1
+  if not s.custom_stages:
+   # 戻るのみ
+   if s.inp.pressed(0) or s.inp.pressed(1) or s.inp.pressed(2):
+    s.audio.play_sfx('select');s._cs(S_MODE)
+   return
+  if s.inp.pressed(1):s.custom_idx=(s.custom_idx-1)%len(s.custom_stages);s.audio.play_sfx('select')
+  if s.inp.pressed(2):s.custom_idx=(s.custom_idx+1)%len(s.custom_stages);s.audio.play_sfx('select')
+  # SW1 + SW2 同時: 戻る
+  if s.inp.held(1) and s.inp.pressed(2):
+   s.audio.play_sfx('select');s._cs(S_MODE);return
+  if s.inp.pressed(0):
+   s.audio.play_sfx('select')
+   s.custom_mode=True
+   s.diff=C.DIFF_NORMAL;s.fx.set_difficulty(s.diff['name'])
+   s.lives=s.diff['lives'];s.score=0;s.deaths=0;s.coins=0;s.coins_max=0
+   s.sn=s.custom_idx+1
+   s.audio.stop_bgm();s._cs(S_INTRO)
 
  def _load_vol(s):
   try:
@@ -198,7 +243,7 @@ class GameNew:
   if s.st_t>=60:s.audio.resume_bgm();s._cs(S_PAN)
  def _u_pan(s):
   s.st_t+=1
-  sd=sn.get_stage_new(s.sn)
+  sd=s._gst()
   gcol=sd.get('goal_col',s.world.width-10)
   mx=max(0,gcol*C.TILE-C.SCREEN_W)
   if s.st_t<30:s.cam_x=int(mx*s.st_t/30)
@@ -226,7 +271,7 @@ class GameNew:
   s._coin_pick()
   # 落下死/致死タイル判定は player.update() 側で行う(full DYING_FR で一貫)
   # pipe check
-  sd=sn.get_stage_new(s.sn)
+  sd=s._gst()
   pc=sd.get('pipe_col',-1)
   if pc>0 and crouch and s.player.on_ground and not s.test_mode:
    px=int(s.player.x)//C.TILE
@@ -258,7 +303,7 @@ class GameNew:
    s._cs(S_DIE);s.audio.stop_bgm();s.audio.play_sfx('damage');return
   gcol2=sd.get('goal_col',-1)
   if gcol2>0 and s.player.x>=gcol2*C.TILE-4:s._on_clear()
-  if s.sn==6:
+  if not s.custom_mode and s.sn==6:
    boss_dead=True;has_boss=False
    for e in s.ents:
     if isinstance(e,et.Boss):has_boss=True;boss_dead=e.hp<=0 if boss_dead else False
@@ -391,7 +436,7 @@ class GameNew:
      elif isinstance(e,et.Boss):f.alive=False;s.score+=200;s.audio.play_sfx('boss_hit')
      break
  def _on_clear(s):
-  sd=sn.get_stage_new(s.sn)
+  sd=s._gst()
   fc=sd.get('flag_col',-1) if sd else -1
   if fc>0 and s.st!=S_FLAG:
    s._cs(S_FLAG);s.fx.set_goal_flash(90)
@@ -430,7 +475,7 @@ class GameNew:
  def _u_pipeout(s):
   s.st_t+=1
   if s.st_t>=45:
-   sd=sn.get_stage_new(s.sn);rc=sd.get('pipe_return_col',64)
+   sd=s._gst();rc=sd.get('pipe_return_col',64)
    s.world=s.main_world;s.player.world=s.world;s.ents=s.main_ents
    s.player.x=float(rc*C.TILE);s.player.vy=0;s.cam_x=s.main_cam;s._cs(S_PLAY)
  def _u_die(s):
@@ -451,7 +496,8 @@ class GameNew:
   s.st_t+=1
   if s.st_t>=150:
    if s.score>s.hi:s.hi=s.score
-   if s.sn>=len(sn.STAGES_NEW):s._cs(S_END)
+   total=len(s.custom_stages) if s.custom_mode else len(sn.STAGES_NEW)
+   if s.sn>=total:s._cs(S_END)
    else:s.sn+=1;s._cs(S_INTRO)
  def _u_over(s):
   s.st_t+=1
@@ -481,7 +527,7 @@ class GameNew:
    ui.draw_item_slot(o,s.bank,s.slot_f,s.slot_r,settled)
  def _u_flag(s):
   s.st_t+=1
-  sd=sn.get_stage_new(s.sn)
+  sd=s._gst()
   fc=sd.get('flag_col',s.world.width-10)
   if s.st_t==1:s.audio.play_sfx('flag_slide')
   if s.st_t==30:s.audio.play_bgm('fanfare')
@@ -497,7 +543,7 @@ class GameNew:
    if s.tl>=C.GOAL_BONUS_TIME_THRESH:s.lives=min(C.MAX_LIVES,s.lives+1)
    s.audio.play_sfx('stage_clear');s._cs(S_CLEAR)
  def _d_flag(s):
-  o=s.oled;sd=sn.get_stage_new(s.sn)
+  o=s.oled;sd=s._gst()
   fc=sd.get('flag_col',s.world.width-10)
   s.world.draw(o,s.bank,s.cam_x,s.cam_y,s.frame)
   for e in s.ents:

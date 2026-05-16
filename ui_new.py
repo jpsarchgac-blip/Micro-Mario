@@ -10,14 +10,39 @@ def draw_mode_select(oled,bank,cursor,blink):
     oled.rect(2,2,124,60,1)
     rd.draw_text(oled,bank,'MICRO MARIO',_cx('MICRO MARIO'),4)
     oled.hline(2,13,124,1)
-    labels=['OLD MODE','NEW MODE','MUSIC MODE','OPTION MODE','TEST MODE']
+    labels=['OLD MODE','NEW MODE','CUSTOM MODE','MUSIC MODE','OPTION MODE','TEST MODE']
     for i,lb in enumerate(labels):
-        y=16+i*8
+        y=15+i*8
         if cursor==i and (blink>>2)&1:
             oled.fill_rect(24,y-1,80,9,1)
         rd.draw_text(oled,bank,lb,_cx(lb),y)
         if i==cursor:
             oled.fill_rect(18,y,4,7,1)
+
+def draw_custom_select(oled,bank,stages,cursor,blink):
+    oled.fill(0)
+    oled.rect(2,2,124,60,1)
+    rd.draw_text(oled,bank,'CUSTOM STAGES',_cx('CUSTOM STAGES'),4)
+    oled.hline(2,13,124,1)
+    # 1ページに最大5件、スクロール
+    page=cursor//5;start=page*5;end=min(start+5,len(stages))
+    for i in range(start,end):
+        y=15+(i-start)*8
+        name=stages[i].get('name','???')
+        if cursor==i and (blink>>2)&1:
+            oled.fill_rect(8,y-1,112,9,1)
+        rd.draw_text(oled,bank,name[:18],14,y)
+    rd.draw_text(oled,bank,'1:GO 1+2:BACK',_cx('1:GO 1+2:BACK'),56)
+
+def draw_custom_empty(oled,bank):
+    oled.fill(0)
+    oled.rect(2,2,124,60,1)
+    rd.draw_text(oled,bank,'CUSTOM STAGES',_cx('CUSTOM STAGES'),6)
+    oled.hline(2,15,124,1)
+    rd.draw_text(oled,bank,'NO STAGES FOUND',_cx('NO STAGES FOUND'),24)
+    rd.draw_text(oled,bank,'PLACE custom.dat',_cx('PLACE custom.dat'),34)
+    rd.draw_text(oled,bank,'OR EDIT custom_stages.py',_cx('OR EDIT custom_stages.py'),42)
+    rd.draw_text(oled,bank,'PRESS ANY KEY',_cx('PRESS ANY KEY'),54)
 
 def draw_music_player(oled,bank,track_name,is_playing):
     oled.fill(0)
