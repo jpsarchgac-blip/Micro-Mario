@@ -4,3 +4,7 @@ out/
 *.tsbuildinfo
 next-env.d.ts.bak
 .DS_Store
+
+# Auto-synced Python sources (run npm run sync-py to regenerate)
+public/python/*.py
+public/python/manifest.json

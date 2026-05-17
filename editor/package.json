@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "sync-py": "python3 ../tools/sync_emulator_sources.py",
+    "predev": "npm run sync-py",
+    "prebuild": "npm run sync-py",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

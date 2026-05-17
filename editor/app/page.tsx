@@ -23,8 +23,8 @@ const TOOLS = [
   },
   {
     href: "/play",
-    title: "Emulator / Play",
-    desc: "実機と同じ画面(128×64)・モード選択をブラウザで体験。A/S/D または ←↓→ で操作。",
+    title: "Play (REAL / Emulator / Preview)",
+    desc: "REAL は Pyodide で実機 Python をそのまま実行 (画面・スイッチ・音・LED のみエミュレート)。A/S/D または ←↓→ で操作。",
     icon: "🎮",
   },
 ];
